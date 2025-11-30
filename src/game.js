@@ -91,7 +91,8 @@ class RompeBloquesGame {
         // 1. Esconder la pantalla de introducción
         introScreen.style.display = 'none';
         // 2. Mostrar la pantalla de juego
-        gameScreen.style.display = 'block';
+        // CAMBIO CRÍTICO: Usar 'flex' para que gameScreen se comporte como un contenedor de pantalla completa.
+        gameScreen.style.display = 'flex'; 
         // 3. Iniciar el juego (MediaPipe, Ladrillos y Menú Principal)
         this.init();
         this.showMainMenu();
