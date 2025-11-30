@@ -26,6 +26,19 @@
             position: relative;
             width: 100vw;
             height: 100vh;
+            display: flex;
+        }
+        
+        .camera-section {
+            width: 30%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .game-section {
+            width: 70%;
+            height: 100%;
+            position: relative;
         }
         
         #cameraBackground {
@@ -34,7 +47,6 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1;
         }
         
         #webcam {
@@ -63,7 +75,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 2;
+            background: #111;
         }
         
         .game-ui {
@@ -187,67 +199,85 @@
             font-size: 12px;
             z-index: 6;
         }
+
+        .camera-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            font-size: 12px;
+            z-index: 2;
+        }
     </style>
 </head>
 <body>
     <div class="game-container">
-        <div id="cameraBackground">
-            <video id="webcam" autoplay playsinline></video>
-            <canvas id="output_canvas"></canvas>
+        <div class="camera-section">
+            <div class="camera-label">CÁMARA - CONTROL POR GESTOS</div>
+            <div id="cameraBackground">
+                <video id="webcam" autoplay playsinline></video>
+                <canvas id="output_canvas"></canvas>
+            </div>
         </div>
         
-        <canvas id="gameCanvas"></canvas>
-        
-        <div class="game-ui">
-            <div class="stats">
-                <div>Vidas: <span id="livesCount">3</span></div>
-                <div>Puntaje: <span id="scoreCount">0</span></div>
-                <div>Nivel: <span id="levelCount">1</span></div>
+        <div class="game-section">
+            <canvas id="gameCanvas"></canvas>
+            
+            <div class="game-ui">
+                <div class="stats">
+                    <div>Vidas: <span id="livesCount">3</span></div>
+                    <div>Puntaje: <span id="scoreCount">0</span></div>
+                    <div>Nivel: <span id="levelCount">1</span></div>
+                </div>
+                
+                <div id="mainMenu" class="menu">
+                    <h2>ROMPEBLOQUES</h2>
+                    <button class="menu-button" onclick="game.startGame(1)">COMENZAR JUEGO</button>
+                    <button class="menu-button" onclick="game.showLevelsMenu()">SELECCIONAR NIVEL</button>
+                    <button class="menu-button" onclick="window.location.href='index.html'">VOLVER AL INICIO</button>
+                </div>
+
+                <div id="levelsMenu" class="menu hidden">
+                    <h2>SELECCIONAR NIVEL</h2>
+                    <div class="level-options">
+                        <div class="level-option" data-level="1">
+                            <h3>NIVEL 1</h3>
+                            <p>Fácil</p>
+                            <small>Gesto: ✌️</small>
+                        </div>
+                        <div class="level-option" data-level="2">
+                            <h3>NIVEL 2</h3>
+                            <p>Medio</p>
+                            <small>Gesto: ✌️</small>
+                        </div>
+                        <div class="level-option" data-level="3">
+                            <h3>NIVEL 3</h3>
+                            <p>Difícil</p>
+                            <small>Gesto: ✌️</small>
+                        </div>
+                    </div>
+                    <button class="menu-button" onclick="game.showMainMenu()">VOLVER</button>
+                </div>
+
+                <div id="pauseMenu" class="menu hidden">
+                    <h2>JUEGO PAUSADO</h2>
+                    <button class="menu-button" onclick="game.resumeGame()">CONTINUAR</button>
+                    <button class="menu-button" onclick="game.showMainMenu()">MENÚ PRINCIPAL</button>
+                </div>
             </div>
             
-            <div id="mainMenu" class="menu">
-                <h2>ROMPEBLOQUES</h2>
-                <button class="menu-button" onclick="game.startGame(1)">COMENZAR JUEGO</button>
-                <button class="menu-button" onclick="game.showLevelsMenu()">SELECCIONAR NIVEL</button>
-                <button class="menu-button" onclick="window.location.href='index.html'">VOLVER AL INICIO</button>
+            <div class="gesture-info">
+                <div>Estado: <span id="gestureState">Iniciando cámara...</span></div>
+                <div>Gesto: <span id="currentGesture">-</span></div>
             </div>
 
-            <div id="levelsMenu" class="menu hidden">
-                <h2>SELECCIONAR NIVEL</h2>
-                <div class="level-options">
-                    <div class="level-option" data-level="1">
-                        <h3>NIVEL 1</h3>
-                        <p>Fácil</p>
-                        <small>Gesto: ✌️</small>
-                    </div>
-                    <div class="level-option" data-level="2">
-                        <h3>NIVEL 2</h3>
-                        <p>Medio</p>
-                        <small>Gesto: ✌️</small>
-                    </div>
-                    <div class="level-option" data-level="3">
-                        <h3>NIVEL 3</h3>
-                        <p>Difícil</p>
-                        <small>Gesto: ✌️</small>
-                    </div>
-                </div>
-                <button class="menu-button" onclick="game.showMainMenu()">VOLVER</button>
+            <div class="debug-info" id="debugInfo">
+                Debug: <span id="debugText">Inicializando...</span>
             </div>
-
-            <div id="pauseMenu" class="menu hidden">
-                <h2>JUEGO PAUSADO</h2>
-                <button class="menu-button" onclick="game.resumeGame()">CONTINUAR</button>
-                <button class="menu-button" onclick="game.showMainMenu()">MENÚ PRINCIPAL</button>
-            </div>
-        </div>
-        
-        <div class="gesture-info">
-            <div>Estado: <span id="gestureState">Iniciando cámara...</span></div>
-            <div>Gesto: <span id="currentGesture">-</span></div>
-        </div>
-
-        <div class="debug-info" id="debugInfo">
-            Debug: <span id="debugText">Inicializando...</span>
         </div>
     </div>
 
@@ -293,17 +323,17 @@
                 // Fallbacks para las imágenes
                 this.images.platform.onerror = () => {
                     console.log('Usando fallback para plataforma');
-                    this.images.platform = this.createFallbackImage(150, 20, '#00ff00');
+                    this.images.platform = this.createFallbackImage(200, 30, '#00ff00');
                 };
                 
                 this.images.ball.onerror = () => {
                     console.log('Usando fallback para pelota');
-                    this.images.ball = this.createFallbackImage(24, 24, '#ffffff', true);
+                    this.images.ball = this.createFallbackImage(30, 30, '#ffffff', true);
                 };
                 
                 this.images.brick.onerror = () => {
                     console.log('Usando fallback para ladrillos');
-                    this.images.brick = this.createFallbackImage(80, 30, '#ff0000');
+                    this.images.brick = this.createFallbackImage(100, 40, '#ff0000');
                 };
             }
 
@@ -332,26 +362,30 @@
             }
 
             setupCanvas() {
-                this.canvas.width = window.innerWidth;
-                this.canvas.height = window.innerHeight;
-                this.canvasElement.width = window.innerWidth;
-                this.canvasElement.height = window.innerHeight;
+                const gameSection = document.querySelector('.game-section');
+                this.canvas.width = gameSection.clientWidth;
+                this.canvas.height = gameSection.clientHeight;
+                
+                const cameraSection = document.querySelector('.camera-section');
+                this.canvasElement.width = cameraSection.clientWidth;
+                this.canvasElement.height = cameraSection.clientHeight;
             }
 
             initGame() {
+                // TAMAÑOS AUMENTADOS - juego más grande
                 this.platform = {
-                    x: this.canvas.width / 2 - 75,
-                    y: this.canvas.height - 50,
-                    width: 150,
-                    height: 20
+                    x: this.canvas.width / 2 - 100, // Más ancha
+                    y: this.canvas.height - 80, // Más arriba
+                    width: 200, // Más ancha
+                    height: 30  // Más alta
                 };
                 
                 this.ball = {
                     x: this.canvas.width / 2,
-                    y: this.canvas.height - 80,
-                    radius: 12,
-                    speedX: 5,
-                    speedY: -5
+                    y: this.canvas.height - 120, // Más arriba
+                    radius: 15, // Más grande
+                    speedX: 6,
+                    speedY: -6
                 };
                 
                 this.bricks = [];
@@ -443,7 +477,7 @@
 
                 // Control de plataforma con la palma (corregido)
                 const wrist = landmarks[0];
-                const gameX = (1 - wrist.x) * this.canvas.width; // Corregido para movimiento natural
+                const gameX = (1 - wrist.x) * this.canvas.width;
                 
                 this.platform.x = gameX - this.platform.width / 2;
                 
@@ -466,7 +500,7 @@
                 const isClickGesture = this.isClickGesture(landmarks);
 
                 let gestureName = 'Moviendo plataforma';
-                let gestureIcon = '👐';
+                let gestureIcon = '👋';
 
                 if (isFist && (now - this.gestureState.lastFistTime > 1000)) {
                     gestureName = 'PUÑO - Pausar juego';
@@ -478,9 +512,9 @@
                     gestureIcon = '✌️';
                     this.gestureState.lastVGestureTime = now;
                     this.handleVGesture();
-                } else if (isClickGesture && (now - this.gestureState.lastClickTime > 500)) {
+                } else if (isClickGesture && (now - this.gestureState.lastClickTime > 800)) {
                     gestureName = 'CLIC - Botones';
-                    gestureIcon = '🖖';
+                    gestureIcon = '👆';
                     this.gestureState.lastClickTime = now;
                     this.handleClickGesture();
                 }
@@ -488,7 +522,13 @@
                 document.getElementById('currentGesture').textContent = `${gestureIcon} ${gestureName}`;
                 
                 // Debug info
-                document.getElementById('debugText').textContent = `Dedos: ${fingersUp}, Fist: ${isFist}, V: ${isVGesture}, Click: ${isClickGesture}`;
+                const indexTip = landmarks[8];
+                const middleTip = landmarks[12];
+                const indexMiddleDist = Math.sqrt(
+                    Math.pow(indexTip.x - middleTip.x, 2) + 
+                    Math.pow(indexTip.y - middleTip.y, 2)
+                );
+                document.getElementById('debugText').textContent = `Dedos: ${fingersUp}, Fist: ${isFist}, V: ${isVGesture}, Click: ${isClickGesture}, Dist: ${indexMiddleDist.toFixed(3)}`;
             }
 
             handleButtonHover(landmarks) {
@@ -558,13 +598,22 @@
             isClickGesture(landmarks) {
                 const indexTip = landmarks[8];
                 const middleTip = landmarks[12];
+                const thumbTip = landmarks[4];
 
+                // Distancia entre índice y medio (deben estar juntos)
                 const indexMiddleDist = Math.sqrt(
                     Math.pow(indexTip.x - middleTip.x, 2) + 
                     Math.pow(indexTip.y - middleTip.y, 2)
                 );
 
-                return indexMiddleDist < 0.05;
+                // Distancia entre índice y pulgar (deben estar separados)
+                const indexThumbDist = Math.sqrt(
+                    Math.pow(indexTip.x - thumbTip.x, 2) + 
+                    Math.pow(indexTip.y - thumbTip.y, 2)
+                );
+
+                // Para el gesto de click: índice y medio juntos, pero no con el pulgar
+                return indexMiddleDist < 0.06 && indexThumbDist > 0.1;
             }
 
             handleFistGesture() {
@@ -581,7 +630,9 @@
 
             handleClickGesture() {
                 if (this.gestureState.hoverButton && this.gameActive) {
-                    // Simular click en el botón seleccionado
+                    console.log('Click en botón:', this.gestureState.hoverButton.textContent);
+                    
+                    // Efecto visual de click
                     this.gestureState.hoverButton.style.background = '#ffff00';
                     setTimeout(() => {
                         if (this.gestureState.hoverButton) {
@@ -598,6 +649,9 @@
                     } else if (this.gestureState.hoverButton.hasAttribute('onclick')) {
                         const onclick = this.gestureState.hoverButton.getAttribute('onclick');
                         eval(onclick);
+                    } else {
+                        // Click directo como fallback
+                        this.gestureState.hoverButton.click();
                     }
                 }
             }
@@ -623,17 +677,20 @@
 
             createBricks() {
                 this.bricks = [];
-                const rows = 3;
+                const rows = 4; // Más filas
                 const cols = 8;
-                const brickWidth = 80;
-                const brickHeight = 30;
-                const padding = 5;
+                const brickWidth = 100; // Más anchos
+                const brickHeight = 40;  // Más altos
+                const padding = 8;
+
+                const totalWidth = cols * (brickWidth + padding) - padding;
+                const startX = (this.canvas.width - totalWidth) / 2;
 
                 for (let row = 0; row < rows; row++) {
                     for (let col = 0; col < cols; col++) {
                         this.bricks.push({
-                            x: col * (brickWidth + padding) + 50,
-                            y: row * (brickHeight + padding) + 50,
+                            x: startX + col * (brickWidth + padding),
+                            y: 80 + row * (brickHeight + padding), // Más abajo
                             width: brickWidth,
                             height: brickHeight,
                             active: true
@@ -754,9 +811,9 @@
 
             resetBall() {
                 this.ball.x = this.canvas.width / 2;
-                this.ball.y = this.canvas.height - 80;
-                this.ball.speedX = 5 * (Math.random() > 0.5 ? 1 : -1);
-                this.ball.speedY = -5;
+                this.ball.y = this.canvas.height - 120;
+                this.ball.speedX = 6 * (Math.random() > 0.5 ? 1 : -1);
+                this.ball.speedY = -6;
             }
 
             levelComplete() {
@@ -777,7 +834,7 @@
             draw() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-                // Dibujar plataforma
+                // Dibujar plataforma (más grande)
                 if (this.images.platform.complete) {
                     this.ctx.drawImage(this.images.platform, this.platform.x, this.platform.y, this.platform.width, this.platform.height);
                 } else {
@@ -785,7 +842,7 @@
                     this.ctx.fillRect(this.platform.x, this.platform.y, this.platform.width, this.platform.height);
                 }
 
-                // Dibujar pelota
+                // Dibujar pelota (más grande)
                 if (this.images.ball.complete) {
                     this.ctx.drawImage(this.images.ball, this.ball.x - this.ball.radius, this.ball.y - this.ball.radius, this.ball.radius * 2, this.ball.radius * 2);
                 } else {
@@ -795,7 +852,7 @@
                     this.ctx.fill();
                 }
 
-                // Dibujar bloques
+                // Dibujar bloques (más grandes)
                 this.bricks.forEach(brick => {
                     if (brick.active) {
                         if (this.images.brick.complete) {
@@ -823,6 +880,17 @@
         let game;
         window.addEventListener('DOMContentLoaded', () => {
             game = new RompeBloquesGame();
+        });
+
+        // Redimensionar canvas cuando cambie el tamaño de la ventana
+        window.addEventListener('resize', () => {
+            if (game) {
+                game.setupCanvas();
+                if (game.gameActive) {
+                    game.createBricks();
+                    game.resetBall();
+                }
+            }
         });
     </script>
 </body>
