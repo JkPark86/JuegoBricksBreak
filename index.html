@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROMPEBLOQUES - Edición Minecraft</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+            color: white;
+            min-height: 100vh;
+        }
+        .game-title {
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+            font-weight: bold;
+        }
+        .subtitle {
+            color: #00ff00;
+        }
+        .preview-image {
+            border: 3px solid #00ff00;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        .instructions {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            border-radius: 10px;
+        }
+        .start-button {
+            background: #00ff00;
+            color: black;
+            border: none;
+            font-weight: bold;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+        }
+        .start-button:hover {
+            background: #00cc00;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="d-flex justify-content-center align-items-center">
+    <div class="container text-center">
+        <h1 class="game-title mb-3">ROMPEBLOQUES</h1>
+        <h2 class="subtitle mb-4">Edición Minecraft</h2>
+        
+        <div class="game-preview mb-4">
+            <img src="/pantalla.png" alt="Vista previa del juego" class="preview-image img-fluid" style="max-width: 600px;">
+        </div>
+        
+        <div class="instructions p-4 mb-4 text-start">
+            <h3 class="text-success mb-3">Instrucciones de Control con Gestos 🙌:</h3>
+            <ul class="list-unstyled">
+                <li class="mb-2">✋ Movimiento Derecha a Izquierda con la palma de la mano para controlar la plataforma.</li>
+                <li class="mb-2">🖖Dos dedos juntos (índice y medio) para hacer clic en los botones (excepto al seleccionar un nivel).</li>
+                <li class="mb-2">✊ Puño cerrado para pausar el juego.</li>
+                <li class="mb-2">✌️Dos dedos separados en forma de V (indice y medio) para seleccionar un nivel en Niveles.</li>
+            </ul>
+        </div>
+        
+        <button id="startGame" class="btn start-button btn-lg">INICIAR JUEGO</button>
+    </div>
+
+    <script>
+        document.getElementById('startGame').addEventListener('click', function() {
+            window.location.href = 'juego.html';
+        });
+    </script>
+</body>
+</html>
