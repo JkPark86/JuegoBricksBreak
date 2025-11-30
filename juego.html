@@ -35,7 +35,7 @@
             width: 100%;
             height: 100%;
             z-index: 1;
-            opacity: 0.3; /* Cámara transparente detrás */
+            opacity: 0.3;
         }
         
         #webcam {
@@ -188,20 +188,31 @@
             font-size: 12px;
             z-index: 6;
         }
+
+        .click-feedback {
+            position: absolute;
+            background: #ffff00;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 7;
+            animation: clickEffect 0.5s ease-out;
+        }
+
+        @keyframes clickEffect {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
     </style>
 </head>
 <body>
     <div class="game-container">
-        <!-- Cámara en el fondo -->
         <div id="cameraBackground">
             <video id="webcam" autoplay playsinline></video>
             <canvas id="output_canvas"></canvas>
         </div>
         
-        <!-- Juego encima -->
         <canvas id="gameCanvas"></canvas>
         
-        <!-- Interfaz de usuario -->
         <div class="game-ui">
             <div class="stats">
                 <div>Vidas: <span id="livesCount">3</span></div>
@@ -211,9 +222,9 @@
             
             <div id="mainMenu" class="menu">
                 <h2>ROMPEBLOQUES</h2>
-                <button class="menu-button" onclick="game.startGame(1)">COMENZAR JUEGO</button>
-                <button class="menu-button" onclick="game.showLevelsMenu()">SELECCIONAR NIVEL</button>
-                <button class="menu-button" onclick="window.location.href='index.html'">VOLVER AL INICIO</button>
+                <button class="menu-button" data-action="start" data-level="1">COMENZAR JUEGO</button>
+                <button class="menu-button" data-action="levels">SELECCIONAR NIVEL</button>
+                <button class="menu-button" data-action="exit">VOLVER AL INICIO</button>
             </div>
 
             <div id="levelsMenu" class="menu hidden">
@@ -235,13 +246,13 @@
                         <small>Gesto: ✌️</small>
                     </div>
                 </div>
-                <button class="menu-button" onclick="game.showMainMenu()">VOLVER</button>
+                <button class="menu-button" data-action="back">VOLVER</button>
             </div>
 
             <div id="pauseMenu" class="menu hidden">
                 <h2>JUEGO PAUSADO</h2>
-                <button class="menu-button" onclick="game.resumeGame()">CONTINUAR</button>
-                <button class="menu-button" onclick="game.showMainMenu()">MENÚ PRINCIPAL</button>
+                <button class="menu-button" data-action="resume">CONTINUAR</button>
+                <button class="menu-button" data-action="menu">MENÚ PRINCIPAL</button>
             </div>
         </div>
         
@@ -264,7 +275,6 @@
                 this.canvasElement = document.getElementById('output_canvas');
                 this.canvasCtx = this.canvasElement.getContext('2d');
                 
-                // Cargar imágenes
                 this.images = {
                     platform: new Image(),
                     ball: new Image(),
@@ -279,16 +289,42 @@
                 this.initGame();
                 this.setupMediaPipe();
                 this.setupFallbackImages();
-                this.setupEventListeners();
+                this.setupButtonActions();
             }
 
-            setupEventListeners() {
-                document.querySelectorAll('.level-option').forEach(option => {
-                    option.addEventListener('click', (e) => {
-                        const level = parseInt(e.currentTarget.dataset.level);
-                        this.startGame(level);
-                    });
+            setupButtonActions() {
+                // Configurar acciones para todos los botones
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('menu-button') || e.target.classList.contains('level-option')) {
+                        this.handleButtonAction(e.target);
+                    }
                 });
+            }
+
+            handleButtonAction(button) {
+                const action = button.dataset.action;
+                const level = button.dataset.level;
+                
+                console.log('Botón clickeado:', button.textContent, 'Action:', action, 'Level:', level);
+                
+                if (action === 'start' && level) {
+                    this.startGame(parseInt(level));
+                } else if (action === 'levels') {
+                    this.showLevelsMenu();
+                } else if (action === 'exit') {
+                    window.location.href = 'index.html';
+                } else if (action === 'back') {
+                    this.showMainMenu();
+                } else if (action === 'resume') {
+                    this.resumeGame();
+                } else if (action === 'menu') {
+                    this.showMainMenu();
+                }
+                
+                // Si es un level-option sin data-action pero con data-level
+                if (!action && level) {
+                    this.startGame(parseInt(level));
+                }
             }
 
             setupFallbackImages() {
@@ -340,18 +376,17 @@
             }
 
             initGame() {
-                // ELEMENTOS MÁS GRANDES
                 this.platform = {
                     x: this.canvas.width / 2 - 90,
                     y: this.canvas.height - 70,
-                    width: 180, // Más ancha
-                    height: 25  // Más alta
+                    width: 180,
+                    height: 25
                 };
                 
                 this.ball = {
                     x: this.canvas.width / 2,
                     y: this.canvas.height - 110,
-                    radius: 14, // Más grande
+                    radius: 14,
                     speedX: 6,
                     speedY: -6
                 };
@@ -368,7 +403,8 @@
                     lastFistTime: 0,
                     lastVGestureTime: 0,
                     currentGesture: 'none',
-                    hoverButton: null
+                    hoverButton: null,
+                    clickCooldown: false
                 };
                 
                 this.createBricks();
@@ -441,20 +477,23 @@
             }
 
             processHandLandmarks(landmarks) {
-                if (!this.gameActive || this.gamePaused) return;
-
-                // Control de plataforma
-                const wrist = landmarks[0];
-                const gameX = (1 - wrist.x) * this.canvas.width;
-                
-                this.platform.x = gameX - this.platform.width / 2;
-                
-                if (this.platform.x < 0) this.platform.x = 0;
-                if (this.platform.x + this.platform.width > this.canvas.width) {
-                    this.platform.x = this.canvas.width - this.platform.width;
+                // Control de plataforma (siempre activo cuando hay juego)
+                if (this.gameActive && !this.gamePaused) {
+                    const wrist = landmarks[0];
+                    const gameX = (1 - wrist.x) * this.canvas.width;
+                    
+                    this.platform.x = gameX - this.platform.width / 2;
+                    
+                    if (this.platform.x < 0) this.platform.x = 0;
+                    if (this.platform.x + this.platform.width > this.canvas.width) {
+                        this.platform.x = this.canvas.width - this.platform.width;
+                    }
                 }
 
+                // Detectar gestos (SIEMPRE activos, incluso en menús)
                 this.detectGestures(landmarks);
+                
+                // Manejar hover de botones (SIEMPRE activo)
                 this.handleButtonHover(landmarks);
             }
 
@@ -465,51 +504,53 @@
                 const isVGesture = this.isVGesture(landmarks);
                 const isClickGesture = this.isClickGesture(landmarks);
 
-                let gestureName = 'Moviendo plataforma';
-                let gestureIcon = '👋';
+                let gestureName = 'Navegando menús';
+                let gestureIcon = '👐';
 
-                if (isFist && (now - this.gestureState.lastFistTime > 1000)) {
+                // Gesto de PUÑO - solo en juego activo
+                if (isFist && (now - this.gestureState.lastFistTime > 1000) && this.gameActive && !this.gamePaused) {
                     gestureName = 'PUÑO - Pausar juego';
                     gestureIcon = '✊';
                     this.gestureState.lastFistTime = now;
                     this.handleFistGesture();
-                } else if (isVGesture && (now - this.gestureState.lastVGestureTime > 1000)) {
+                } 
+                // Gesto de V - solo en juego activo
+                else if (isVGesture && (now - this.gestureState.lastVGestureTime > 1000) && this.gameActive && !this.gamePaused) {
                     gestureName = 'V - Seleccionar nivel';
                     gestureIcon = '✌️';
                     this.gestureState.lastVGestureTime = now;
                     this.handleVGesture();
-                } else if (isClickGesture && (now - this.gestureState.lastClickTime > 600)) {
-                    gestureName = 'CLIC - Botones';
+                } 
+                // Gesto de CLICK - SIEMPRE ACTIVO en todos los menús
+                else if (isClickGesture && (now - this.gestureState.lastClickTime > 600) && !this.gestureState.clickCooldown) {
+                    gestureName = 'CLIC - Seleccionar';
                     gestureIcon = '👆';
                     this.gestureState.lastClickTime = now;
                     this.handleClickGesture();
                 }
+                // Movimiento normal
+                else if (this.gameActive && !this.gamePaused) {
+                    gestureName = 'Moviendo plataforma';
+                    gestureIcon = '👐';
+                }
 
                 document.getElementById('currentGesture').textContent = `${gestureIcon} ${gestureName}`;
                 
-                // Debug info mejorada
+                // Debug info
                 const indexTip = landmarks[8];
                 const middleTip = landmarks[12];
-                const thumbTip = landmarks[4];
                 
                 const indexMiddleDist = Math.sqrt(
                     Math.pow(indexTip.x - middleTip.x, 2) + 
                     Math.pow(indexTip.y - middleTip.y, 2)
                 );
                 
-                const indexThumbDist = Math.sqrt(
-                    Math.pow(indexTip.x - thumbTip.x, 2) + 
-                    Math.pow(indexTip.y - thumbTip.y, 2)
-                );
-                
                 document.getElementById('debugText').textContent = 
                     `Dedos: ${fingersUp}, Fist: ${isFist}, V: ${isVGesture}, Click: ${isClickGesture}\n` +
-                    `Dist I-M: ${indexMiddleDist.toFixed(3)}, Dist I-P: ${indexThumbDist.toFixed(3)}`;
+                    `Dist I-M: ${indexMiddleDist.toFixed(3)}`;
             }
 
             handleButtonHover(landmarks) {
-                if (!this.gameActive || this.gamePaused) return;
-
                 const indexTip = landmarks[8];
                 const cursorX = (1 - indexTip.x) * this.canvas.width;
                 const cursorY = indexTip.y * this.canvas.height;
@@ -573,17 +614,14 @@
             isClickGesture(landmarks) {
                 const indexTip = landmarks[8];
                 const middleTip = landmarks[12];
-                const thumbTip = landmarks[4];
 
-                // GESTO DE CLICK MEJORADO - Índice y medio juntos
+                // GESTO DE CLICK MEJORADO - más sensible
                 const indexMiddleDist = Math.sqrt(
                     Math.pow(indexTip.x - middleTip.x, 2) + 
                     Math.pow(indexTip.y - middleTip.y, 2)
                 );
 
-                // Para el gesto de click: solo nos importa que índice y medio estén juntos
-                // No importa la posición del pulgar
-                return indexMiddleDist < 0.04; // Más sensible - dedos muy juntos
+                return indexMiddleDist < 0.05; // Ajustado para mejor detección
             }
 
             handleFistGesture() {
@@ -599,30 +637,37 @@
             }
 
             handleClickGesture() {
-                if (this.gestureState.hoverButton && this.gameActive) {
-                    console.log('CLICK DETECTADO en:', this.gestureState.hoverButton.textContent);
+                if (this.gestureState.hoverButton) {
+                    console.log('CLICK GESTURE en:', this.gestureState.hoverButton.textContent);
                     
-                    // Efecto visual más evidente
-                    const originalBg = this.gestureState.hoverButton.style.background;
-                    this.gestureState.hoverButton.style.background = '#ffff00';
-                    this.gestureState.hoverButton.style.transform = 'scale(1.1)';
+                    // Efecto visual de click
+                    this.showClickEffect(this.gestureState.hoverButton);
                     
+                    // Cooldown para evitar clicks múltiples
+                    this.gestureState.clickCooldown = true;
                     setTimeout(() => {
-                        if (this.gestureState.hoverButton) {
-                            this.gestureState.hoverButton.style.background = originalBg;
-                            this.gestureState.hoverButton.style.transform = '';
-                        }
-                    }, 300);
+                        this.gestureState.clickCooldown = false;
+                    }, 600);
                     
                     // Ejecutar acción del botón
-                    if (this.gestureState.hoverButton.classList.contains('level-option')) {
-                        const level = parseInt(this.gestureState.hoverButton.dataset.level);
-                        this.startGame(level);
-                    } else {
-                        // Click directo
-                        this.gestureState.hoverButton.click();
-                    }
+                    this.handleButtonAction(this.gestureState.hoverButton);
                 }
+            }
+
+            showClickEffect(button) {
+                const rect = button.getBoundingClientRect();
+                const effect = document.createElement('div');
+                effect.className = 'click-feedback';
+                effect.style.width = '50px';
+                effect.style.height = '50px';
+                effect.style.left = (rect.left + rect.width / 2 - 25) + 'px';
+                effect.style.top = (rect.top + rect.height / 2 - 25) + 'px';
+                
+                document.body.appendChild(effect);
+                
+                setTimeout(() => {
+                    document.body.removeChild(effect);
+                }, 500);
             }
 
             countFingersUp(landmarks) {
@@ -647,8 +692,8 @@
                 this.bricks = [];
                 const rows = 4;
                 const cols = 8;
-                const brickWidth = 90;  // Más grandes
-                const brickHeight = 35; // Más grandes
+                const brickWidth = 90;
+                const brickHeight = 35;
                 const padding = 8;
 
                 const totalWidth = cols * (brickWidth + padding) - padding;
@@ -800,7 +845,6 @@
             draw() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-                // Dibujar plataforma más grande
                 if (this.images.platform.complete) {
                     this.ctx.drawImage(this.images.platform, this.platform.x, this.platform.y, this.platform.width, this.platform.height);
                 } else {
@@ -808,7 +852,6 @@
                     this.ctx.fillRect(this.platform.x, this.platform.y, this.platform.width, this.platform.height);
                 }
 
-                // Dibujar pelota más grande
                 if (this.images.ball.complete) {
                     this.ctx.drawImage(this.images.ball, this.ball.x - this.ball.radius, this.ball.y - this.ball.radius, this.ball.radius * 2, this.ball.radius * 2);
                 } else {
@@ -818,7 +861,6 @@
                     this.ctx.fill();
                 }
 
-                // Dibujar bloques más grandes
                 this.bricks.forEach(brick => {
                     if (brick.active) {
                         if (this.images.brick.complete) {
