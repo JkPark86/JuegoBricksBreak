@@ -1,0 +1,13 @@
+{
+  "build": {
+    "env": {
+      "VITE_PUBLIC_PATH": "/"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
