@@ -99,14 +99,21 @@ class RompeBloquesGame {
     }
 
     startApp() {
-        // 1. Esconder la pantalla de introducción
-        introScreen.style.display = 'none';
-        // 2. Mostrar la pantalla de juego
-        gameScreen.style.display = 'block';
-        // 3. Iniciar el juego (MediaPipe, Ladrillos y Menú Principal)
-        this.init();
-        this.showMainMenu();
-    }
+    // 1. Esconder la pantalla de introducción
+    introScreen.style.display = 'none';
+
+    // 2. Mostrar la pantalla de juego
+    gameScreen.style.display = 'block';
+
+    // 3. Cambiar el estado (esto es lo que faltaba)
+    this.gameState = "menu";
+
+    // 4. Inicializar MediaPipe + ladrillos
+    this.init();
+
+    // 5. Mostrar el menú principal para poder jugar
+    this.showMainMenu();
+}
     
     // **********************************************
     // FIN NUEVA FUNCIÓN
