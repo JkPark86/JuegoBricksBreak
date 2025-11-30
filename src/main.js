@@ -1,3 +1,4 @@
-import './style.css';
-import './game.js';
-import './counter.js';
+// Redirección desde index.html a juego.html
+document.getElementById('startGame').addEventListener('click', function() {
+  window.location.href = 'juego.html';
+});
