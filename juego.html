@@ -44,7 +44,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Esto corrige la inversión */
+            transform: scaleX(-1);
         }
         
         #output_canvas {
@@ -54,7 +54,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Esto también */
+            transform: scaleX(-1);
         }
         
         #gameCanvas {
@@ -246,8 +246,8 @@
             <div>Gesto: <span id="currentGesture">-</span></div>
         </div>
 
-        <div class="debug-info" id="debugInfo" style="display: none;">
-            Debug: <span id="debugText"></span>
+        <div class="debug-info" id="debugInfo">
+            Debug: <span id="debugText">Inicializando...</span>
         </div>
     </div>
 
@@ -260,37 +260,49 @@
                 this.canvasElement = document.getElementById('output_canvas');
                 this.canvasCtx = this.canvasElement.getContext('2d');
                 
-                // Cargar imágenes con rutas correctas
+                // Cargar imágenes con rutas corregidas para carpeta public
                 this.images = {
                     platform: new Image(),
                     ball: new Image(),
                     brick: new Image()
                 };
                 
-                this.images.platform.src = './tierra.png';
-                this.images.ball.src = './esfera.png';
-                this.images.brick.src = './ladrillo.png';
+                // Rutas corregidas para imágenes en carpeta public
+                this.images.platform.src = 'public/tierra.png';
+                this.images.ball.src = 'public/esfera.png';
+                this.images.brick.src = 'public/ladrillo.png';
                 
                 this.setupCanvas();
                 this.initGame();
                 this.setupMediaPipe();
                 this.setupFallbackImages();
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // Event listeners para botones de nivel
+                document.querySelectorAll('.level-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        const level = parseInt(e.currentTarget.dataset.level);
+                        this.startGame(level);
+                    });
+                });
             }
 
             setupFallbackImages() {
                 // Fallbacks para las imágenes
                 this.images.platform.onerror = () => {
-                    console.log('Fallback para plataforma');
+                    console.log('Usando fallback para plataforma');
                     this.images.platform = this.createFallbackImage(150, 20, '#00ff00');
                 };
                 
                 this.images.ball.onerror = () => {
-                    console.log('Fallback para pelota');
+                    console.log('Usando fallback para pelota');
                     this.images.ball = this.createFallbackImage(24, 24, '#ffffff', true);
                 };
                 
                 this.images.brick.onerror = () => {
-                    console.log('Fallback para ladrillos');
+                    console.log('Usando fallback para ladrillos');
                     this.images.brick = this.createFallbackImage(80, 30, '#ff0000');
                 };
             }
@@ -353,7 +365,8 @@
                     lastClickTime: 0,
                     lastFistTime: 0,
                     lastVGestureTime: 0,
-                    currentGesture: 'none'
+                    currentGesture: 'none',
+                    hoverButton: null
                 };
                 
                 this.createBricks();
@@ -428,9 +441,9 @@
             processHandLandmarks(landmarks) {
                 if (!this.gameActive || this.gamePaused) return;
 
-                // CORREGIDO: Usar posición invertida para que coincida con el movimiento
+                // Control de plataforma con la palma (corregido)
                 const wrist = landmarks[0];
-                const gameX = (1 - wrist.x) * this.canvas.width; // Esto corrige la inversión
+                const gameX = (1 - wrist.x) * this.canvas.width; // Corregido para movimiento natural
                 
                 this.platform.x = gameX - this.platform.width / 2;
                 
@@ -441,6 +454,8 @@
 
                 // Detectar gestos
                 this.detectGestures(landmarks);
+                // Manejar hover de botones
+                this.handleButtonHover(landmarks);
             }
 
             detectGestures(landmarks) {
@@ -474,7 +489,33 @@
                 
                 // Debug info
                 document.getElementById('debugText').textContent = `Dedos: ${fingersUp}, Fist: ${isFist}, V: ${isVGesture}, Click: ${isClickGesture}`;
-                document.getElementById('debugInfo').style.display = 'block';
+            }
+
+            handleButtonHover(landmarks) {
+                if (!this.gameActive || this.gamePaused) return;
+
+                const indexTip = landmarks[8];
+                const cursorX = (1 - indexTip.x) * this.canvas.width;
+                const cursorY = indexTip.y * this.canvas.height;
+
+                let hoverButton = null;
+                const activeMenus = document.querySelectorAll('.menu:not(.hidden)');
+
+                activeMenus.forEach(menu => {
+                    const buttons = menu.querySelectorAll('.menu-button, .level-option');
+                    buttons.forEach(button => {
+                        const rect = button.getBoundingClientRect();
+                        button.classList.remove('selected');
+                        
+                        if (cursorX >= rect.left && cursorX <= rect.right &&
+                            cursorY >= rect.top && cursorY <= rect.bottom) {
+                            hoverButton = button;
+                            button.classList.add('selected');
+                        }
+                    });
+                });
+
+                this.gestureState.hoverButton = hoverButton;
             }
 
             isFist(landmarks) {
@@ -505,13 +546,18 @@
                 const ringDown = ringTip.y > ringPip.y;
                 const pinkyDown = pinkyTip.y > pinkyPip.y;
 
-                return indexUp && middleUp && ringDown && pinkyDown;
+                // Detección más flexible del gesto V
+                const indexMiddleDist = Math.sqrt(
+                    Math.pow(indexTip.x - middleTip.x, 2) + 
+                    Math.pow(indexTip.y - middleTip.y, 2)
+                );
+
+                return indexUp && middleUp && ringDown && pinkyDown && indexMiddleDist > 0.08;
             }
 
             isClickGesture(landmarks) {
                 const indexTip = landmarks[8];
                 const middleTip = landmarks[12];
-                const thumbTip = landmarks[4];
 
                 const indexMiddleDist = Math.sqrt(
                     Math.pow(indexTip.x - middleTip.x, 2) + 
@@ -534,8 +580,26 @@
             }
 
             handleClickGesture() {
-                // Para futura implementación de clicks en botones
-                console.log('Click gesture detected');
+                if (this.gestureState.hoverButton && this.gameActive) {
+                    // Simular click en el botón seleccionado
+                    this.gestureState.hoverButton.style.background = '#ffff00';
+                    setTimeout(() => {
+                        if (this.gestureState.hoverButton) {
+                            this.gestureState.hoverButton.style.background = '';
+                        }
+                    }, 200);
+                    
+                    // Ejecutar la acción del botón
+                    if (this.gestureState.hoverButton.classList.contains('level-option')) {
+                        const level = parseInt(this.gestureState.hoverButton.dataset.level);
+                        this.startGame(level);
+                    } else if (this.gestureState.hoverButton.onclick) {
+                        this.gestureState.hoverButton.onclick();
+                    } else if (this.gestureState.hoverButton.hasAttribute('onclick')) {
+                        const onclick = this.gestureState.hoverButton.getAttribute('onclick');
+                        eval(onclick);
+                    }
+                }
             }
 
             countFingersUp(landmarks) {
@@ -588,11 +652,17 @@
                 this.createBricks();
                 this.resetBall();
                 this.updateUI();
+                
+                // Reiniciar el game loop
+                if (this.gameLoopId) {
+                    cancelAnimationFrame(this.gameLoopId);
+                }
                 this.gameLoop();
             }
 
             showMainMenu() {
                 this.gameActive = false;
+                this.gamePaused = false;
                 this.hideAllMenus();
                 document.getElementById('mainMenu').classList.remove('hidden');
             }
@@ -614,6 +684,8 @@
                 if (this.gamePaused) {
                     this.gamePaused = false;
                     this.hideAllMenus();
+                    // Reanudar el game loop
+                    this.gameLoop();
                 }
             }
 
@@ -743,7 +815,7 @@
                 if (this.gameActive && !this.gamePaused) {
                     this.update();
                     this.draw();
-                    requestAnimationFrame(() => this.gameLoop());
+                    this.gameLoopId = requestAnimationFrame(() => this.gameLoop());
                 }
             }
         }
@@ -751,14 +823,6 @@
         let game;
         window.addEventListener('DOMContentLoaded', () => {
             game = new RompeBloquesGame();
-            
-            // Event listeners para botones de nivel
-            document.querySelectorAll('.level-option').forEach(option => {
-                option.addEventListener('click', function() {
-                    const level = parseInt(this.dataset.level);
-                    game.startGame(level);
-                });
-            });
         });
     </script>
 </body>
