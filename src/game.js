@@ -1,497 +1,720 @@
-// game.js - completo y autocontenido (no ES module, listo para public/)
-/* global Hands, Camera, drawConnectors, drawLandmarks, HAND_CONNECTIONS */
+// game.js - Versión sin módulos ES6
+const videoElement = document.getElementById('webcam');
+const canvasElement = document.getElementById('output_canvas');
+const canvasCtx = canvasElement.getContext('2d');
 
-(function () {
-  // DOM refs globales
-  const videoElement = document.getElementById('webcam');
-  const canvasElement = document.getElementById('output_canvas');
-  const canvasCtx = canvasElement ? canvasElement.getContext('2d') : null;
-  const introScreen = document.getElementById('introScreen');
-  const gameScreen = document.getElementById('gameScreen');
-  const startGameButton = document.getElementById('startGame');
+class RompeBloquesGame {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        canvasElement.width = window.innerWidth;
+        canvasElement.height = window.innerHeight;
+        
+        this.images = {
+            platform: new Image(),
+            ball: new Image(), 
+            brick: new Image()
+        };
 
-  // Game state
-  let canvasGame = document.getElementById('gameCanvas');
-  let ctxGame = canvasGame ? canvasGame.getContext('2d') : null;
+        // Usar rutas absolutas para las imágenes
+        this.images.platform.src = '/tierra.png';
+        this.images.ball.src = '/esfera.png';
+        this.images.brick.src = '/ladrillo.png';
 
-  let hands = null;
-  let camera = null;
-  let cameraStarted = false;
+        this.setupFallbackImages();
 
-  const images = {
-    platform: new Image(),
-    ball: new Image(),
-    brick: new Image()
-  };
-  // Rutas (debe haber estos archivos en public/)
-images.platform.src = './public/tierra.png';
-images.ball.src     = './public/esfera.png'; 
-images.brick.src    = './public/ladrillo.png';
-
-  // Fallback generator
-  function createFallback(w, h, color, type) {
-    const c = document.createElement('canvas');
-    c.width = w; c.height = h;
-    const g = c.getContext('2d');
-    g.fillStyle = color;
-    if (type === 'ball') {
-      g.beginPath(); g.arc(w/2, h/2, Math.min(w,h)/2, 0, Math.PI*2); g.fill();
-    } else {
-      g.fillRect(0,0,w,h);
-      if (type === 'brick') { g.strokeStyle = '#aa0000'; g.lineWidth = 3; g.strokeRect(0,0,w,h); }
+        this.platform = {
+            x: this.canvas.width / 2 - 120,
+            y: this.canvas.height - 120,
+            width: 240,
+            height: 35
+        };
+        
+        this.ball = {
+            x: this.canvas.width / 2,
+            y: this.canvas.height - 180,
+            radius: 25,
+            speedX: 8,
+            speedY: -8,
+            active: false
+        };
+        
+        this.bricks = [];
+        this.lives = 3;
+        this.score = 0;
+        this.level = 1;
+        this.gameState = 'menu';
+        this.waitingForRestart = false;
+        this.fistStartTime = 0;
+        this.completedLevels = [];
+        
+        this.gestureState = {
+            indexTip: { x: 0, y: 0 },
+            middleTip: { x: 0, y: 0 },
+            palmBase: { x: 0, y: 0 },
+            fist: false,
+            fingersUp: 0,
+            clickActive: false,
+            lastClickTime: 0,
+            hoverButton: null,
+            vGesture: false
+        };
+        
+        this.hands = null;
+        this.camera = null;
+        
+        this.levelSpeeds = {
+            1: { x: 8, y: -8 },
+            2: { x: 12, y: -12 },
+            3: { x: 16, y: -16 }
+        };
+        
+        this.init();
     }
-    const img = new Image(); img.src = c.toDataURL(); return img;
-  }
-  const fallback = {
-    platform: createFallback(240,35,'#00ff00','platform'),
-    ball: createFallback(50,50,'#ffffff','ball'),
-    brick: createFallback(100,40,'#ff0000','brick')
-  };
 
-  const state = {
-    platform: { x: 0, y: 0, width: 240, height: 35 },
-    ball: { x: 0, y: 0, radius: 22, speedX: 8, speedY: -8, active:false },
-    bricks: [],
-    lives: 3,
-    score: 0,
-    level: 1,
-    gameState: 'intro', // intro/menu/levels/playing/paused/win/lose/complete
-    waitingForRestart: false,
-    fistStartTime: 0,
-    completedLevels: [],
-    gestureState: {
-      indexTip: {x:0,y:0}, middleTip:{x:0,y:0}, palmBase:{x:0,y:0},
-      fist:false, fingersUp:0, clickActive:false, lastClickTime:0, hoverButton:null, vGesture:false
-    },
-    levelSpeeds: {1:{x:8,y:-8}, 2:{x:12,y:-12}, 3:{x:16,y:-16}}
-  };
-
-  // resize helper
-  function resizeAll() {
-    if (!canvasGame || !canvasElement) return;
-    canvasGame.width = window.innerWidth;
-    canvasGame.height = window.innerHeight;
-    canvasElement.width = window.innerWidth;
-    canvasElement.height = window.innerHeight;
-    // platform pos
-    state.platform.x = Math.max(0, (canvasGame.width/2) - (state.platform.width/2));
-    state.platform.y = canvasGame.height - 120;
-    state.ball.x = canvasGame.width / 2;
-    state.ball.y = canvasGame.height - 180;
-  }
-  window.addEventListener('resize', resizeAll);
-
-  // Start handlers
-  function setupStartButton() {
-    if (!startGameButton) return;
-    startGameButton.addEventListener('click', startApp);
-  }
-
-  // Attach menu listeners (buttons on DOM)
-  function attachMenuListeners() {
-    document.querySelectorAll('.menu-button').forEach(b => {
-      b.addEventListener('click', (e) => {
-        e.preventDefault();
-        handleButtonClick(b);
-      });
-    });
-    document.querySelectorAll('.level-option').forEach(o => {
-      o.addEventListener('click', (e) => {
-        e.preventDefault();
-        const lv = parseInt(o.dataset.level || '1');
-        startGame(lv);
-      });
-    });
-    // ESC to go to intro (debug)
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') exitToIntroScreen(); });
-  }
-
-  // ---------- MediaPipe setup ----------
-  async function setupMediaPipe() {
-    try {
-      if (typeof Hands === 'undefined' || typeof Camera === 'undefined' || !videoElement) {
-        console.warn('MediaPipe Hands/Camera no disponibles — gestos deshabilitados');
-        return;
-      }
-      if (cameraStarted) return;
-
-      hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
-      hands.setOptions({
-        maxNumHands: 2,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
-      hands.onResults(onHandResults);
-
-      camera = new Camera(videoElement, {
-        onFrame: async () => { if (hands) await hands.send({image: videoElement}); },
-        width: window.innerWidth, height: window.innerHeight
-      });
-      await camera.start();
-      cameraStarted = true;
-      console.log('Camera started');
-    } catch (err) {
-      console.error('setupMediaPipe error', err);
-      hands = null; camera = null; cameraStarted = false;
+    setupFallbackImages() {
+        this.createFallbackImage('platform', 240, 35, '#00ff00');
+        this.createFallbackImage('ball', 50, 50, '#ffffff');
+        this.createFallbackImage('brick', 100, 40, '#ff0000');
     }
-  }
 
-  function stopCamera() {
-    try {
-      if (camera && camera.stream) camera.stream.getTracks().forEach(t=>t.stop());
-      else if (videoElement && videoElement.srcObject) {
-        videoElement.srcObject.getTracks().forEach(t=>t.stop());
-      }
-    } catch(e){console.warn('stopCamera',e);}
-    cameraStarted = false;
-  }
-
-  // ---------- Results processing ----------
-  function onHandResults(results) {
-    if (!canvasCtx || !canvasElement) return;
-    canvasCtx.save();
-    canvasCtx.clearRect(0,0,canvasElement.width, canvasElement.height);
-    if (results.image) {
-      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-    }
-    if (results.multiHandLandmarks) {
-      for (const lm of results.multiHandLandmarks) {
-        if (typeof drawConnectors !== 'undefined') {
-          drawConnectors(canvasCtx, lm, HAND_CONNECTIONS, {color:'#00ff00', lineWidth:3});
-          drawLandmarks(canvasCtx, lm, {color:'#ff0000', radius:4});
+    createFallbackImage(name, width, height, color) {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.fillStyle = color;
+        
+        if (name === 'ball') {
+            ctx.beginPath();
+            ctx.arc(width/2, height/2, width/2, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillRect(0, 0, width, height);
+            
+            if (name === 'brick') {
+                ctx.strokeStyle = '#aa0000';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(0, 0, width, height);
+            }
         }
-        processHandLandmarks(lm);
-      }
+        
+        const img = new Image();
+        img.src = canvas.toDataURL();
+        
+        this.images[name].onerror = () => {
+            this.images[name] = img;
+        };
     }
-    canvasCtx.restore();
-  }
-
-  function processHandLandmarks(landmarks) {
-    if (!canvasElement) return;
-    const wrist = landmarks[0], indexTip = landmarks[8], middleTip = landmarks[12];
-    state.gestureState.palmBase = { x: (1 - wrist.x) * canvasElement.width, y: wrist.y * canvasElement.height };
-    state.gestureState.indexTip = { x: (1 - indexTip.x) * canvasElement.width, y: indexTip.y * canvasElement.height };
-    state.gestureState.middleTip = { x: (1 - middleTip.x) * canvasElement.width, y: middleTip.y * canvasElement.height };
-
-    state.gestureState.fingersUp = countFingersUp(landmarks);
-    state.gestureState.fist = isFist(landmarks);
-    state.gestureState.vGesture = isVGesture(landmarks);
-
-    const clickDistance = Math.hypot(state.gestureState.indexTip.x - state.gestureState.middleTip.x, state.gestureState.indexTip.y - state.gestureState.middleTip.y);
-    const now = Date.now();
-    if (clickDistance < 40 && !state.gestureState.clickActive && (now - state.gestureState.lastClickTime) > 400) {
-      state.gestureState.clickActive = true; state.gestureState.lastClickTime = now; handleGestureClick();
-    } else if (clickDistance >= 40) state.gestureState.clickActive = false;
-
-    const fcount = document.getElementById('fingersCount'); if (fcount) fcount.textContent = state.gestureState.fingersUp;
-    const gs = document.getElementById('gestureState'); if (gs) {
-      let e = '🖐️ MOVIMIENTO - Plataforma';
-      if (state.gestureState.fist) e = '✊ PUÑO - Pausa';
-      else if (clickDistance < 40) e = '👆 CLIC - Botones';
-      else if (state.gestureState.vGesture) e = '✌️ V - Seleccionar Nivel';
-      gs.textContent = e;
+    
+    async init() {
+        await this.setupMediaPipe();
+        this.createBricks();
+        this.setupEventListeners();
+        this.gameLoop();
     }
 
-    if (state.gameState === 'playing' && !state.waitingForRestart) movePlatformWithHand();
+    setupEventListeners() {
+        // Agregar event listeners para botones
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('menu-button') || e.target.classList.contains('level-option')) {
+                this.handleButtonClick(e.target);
+            }
+        });
 
-    // fist long press to pause
-    if (state.gestureState.fist) {
-      if (state.fistStartTime === 0) state.fistStartTime = now;
-      else if (state.gameState === 'playing' && !state.waitingForRestart && (now - state.fistStartTime) > 600) { pauseGame(); state.fistStartTime = 0; }
-    } else state.fistStartTime = 0;
+        // Redimensionar canvas cuando cambie el tamaño de la ventana
+        window.addEventListener('resize', () => {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            canvasElement.width = window.innerWidth;
+            canvasElement.height = window.innerHeight;
+        });
+    }
+    
+    async setupMediaPipe() {
+        try {
+            if (typeof Hands === 'undefined' || typeof Camera === 'undefined') {
+                console.error('MediaPipe Hands o Camera no están definidos. Asegúrate de incluir los scripts.');
+                return;
+            }
 
-    handleButtonHover();
-    if (state.gameState === 'levels' && state.gestureState.vGesture) handleLevelSelection();
-  }
-
-  // gestures helpers
-  function isVGesture(landmarks) {
-    const indexTip = landmarks[8], middleTip = landmarks[12], ringTip = landmarks[16], pinkyTip = landmarks[20];
-    const indexPip = landmarks[6], middlePip = landmarks[10], ringPip = landmarks[14], pinkyPip = landmarks[18];
-    return (indexTip.y < indexPip.y) && (middleTip.y < middlePip.y) && (ringTip.y > ringPip.y) && (pinkyTip.y > pinkyPip.y);
-  }
-
-  function countFingersUp(landmarks) {
-    let cnt = 0; const tips=[8,12,16,20], pips=[6,10,14,18];
-    for (let i=0;i<tips.length;i++) if (landmarks[tips[i]].y < landmarks[pips[i]].y) cnt++;
-    if (landmarks[4] && landmarks[3] && landmarks[4].x < landmarks[3].x) cnt++;
-    return cnt;
-  }
-
-  function isFist(landmarks) {
-    let bent = 0; const tips=[8,12,16,20], pips=[6,10,14,18];
-    for (let i=0;i<tips.length;i++) if (landmarks[tips[i]].y > landmarks[pips[i]].y) bent++;
-    return bent >= 3;
-  }
-
-  // UI hover / click handling
-  function handleButtonHover() {
-    if (state.gameState === 'intro') return;
-    const menus = document.querySelectorAll('.menu');
-    let hover = null;
-    menus.forEach(menu => {
-      if (getComputedStyle(menu).display === 'none') return;
-      const items = menu.querySelectorAll('.menu-button, .level-option');
-      items.forEach(it => {
-        it.classList.remove('selected');
-        const r = it.getBoundingClientRect();
-        if (state.gestureState.indexTip.x >= r.left && state.gestureState.indexTip.x <= r.right && state.gestureState.indexTip.y >= r.top && state.gestureState.indexTip.y <= r.bottom) {
-          hover = it;
-          it.classList.add('selected');
+            this.hands = new Hands({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                }
+            });
+            
+            this.hands.setOptions({
+                maxNumHands: 2,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            
+            this.hands.onResults(this.onHandResults.bind(this));
+            
+            this.camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    await this.hands.send({ image: videoElement });
+                },
+                width: window.innerWidth,
+                height: window.innerHeight
+            });
+            
+            await this.camera.start();
+            
+        } catch (error) {
+            console.error('Error MediaPipe:', error);
         }
-      });
-    });
-    state.gestureState.hoverButton = hover;
-  }
-
-  function handleGestureClick() {
-    if (state.gameState === 'intro') return;
-    const btn = state.gestureState.hoverButton;
-    if (!btn) return;
-    const old = btn.style.background;
-    btn.style.background = '#ffff00';
-    setTimeout(()=>{ btn.style.background = old || ''; }, 180);
-    handleButtonClick(btn);
-  }
-
-  function handleLevelSelection() {
-    const options = document.querySelectorAll('.level-option');
-    let sel = null;
-    options.forEach(opt => {
-      const r = opt.getBoundingClientRect();
-      opt.classList.remove('selected');
-      if (state.gestureState.indexTip.x >= r.left && state.gestureState.indexTip.x <= r.right && state.gestureState.indexTip.y >= r.top && state.gestureState.indexTip.y <= r.bottom) {
-        opt.classList.add('selected');
-        sel = parseInt(opt.dataset.level);
-      }
-    });
-    if (sel && state.gestureState.vGesture) {
-      setTimeout(()=>{ if (state.gestureState.vGesture) startGame(sel); }, 700);
     }
-  }
-
-  // Platform movement by hand
-  function movePlatformWithHand() {
-    const gameX = state.gestureState.palmBase.x;
-    state.platform.x = gameX - (state.platform.width / 2);
-    if (state.platform.x < 0) state.platform.x = 0;
-    if (state.platform.x + state.platform.width > canvasGame.width) state.platform.x = canvasGame.width - state.platform.width;
-  }
-
-  // --------- Bricks / Game logic ----------
-  function createBricks() {
-    state.bricks = [];
-    const rows = 3;
-    const cols = 8;
-    const brickW = Math.min(120, Math.floor(canvasGame.width/cols) - 8);
-    const brickH = 40;
-    const padding = 8;
-    const totalWidth = cols * (brickW + padding) - padding;
-    const startX = Math.max(20, Math.floor((canvasGame.width - totalWidth)/2));
-    for (let r=0;r<rows;r++){
-      for (let c=0;c<cols;c++){
-        state.bricks.push({ x: startX + c*(brickW+padding), y: 80 + r*(brickH+padding), width: brickW, height: brickH, active:true });
-      }
+    
+    onHandResults(results) {
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        
+        if (results.image) {
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+        }
+        
+        if (results.multiHandLandmarks) {
+            for (const landmarks of results.multiHandLandmarks) {
+                this.drawHandLandmarks(landmarks);
+                this.processHandLandmarks(landmarks);
+            }
+        }
+        
+        canvasCtx.restore();
     }
-  }
-
-  async function showLifeLostMessage() {
-    if (state.lives > 0) {
-      const msg = document.getElementById('lifeLostMessage');
-      const text = document.getElementById('lifeLostText');
-      const timer = document.getElementById('lifeLostTimer');
-      if (!msg || !text || !timer) return;
-      text.textContent = `Te quedan ${state.lives} vidas`;
-      msg.style.display = 'block';
-      for (let i=3;i>0;i--) { timer.textContent = `Continuando en ${i} segundos...`; await new Promise(r=>setTimeout(r,1000)); }
-      msg.style.display = 'none';
-      state.waitingForRestart = false;
-      state.ball.x = canvasGame.width / 2;
-      state.ball.y = canvasGame.height - 180;
-      const sp = state.levelSpeeds[state.level] || state.levelSpeeds[1];
-      state.ball.speedX = sp.x; state.ball.speedY = sp.y;
+    
+    drawHandLandmarks(landmarks) {
+        const HAND_CONNECTIONS = [
+            [0,1],[1,2],[2,3],[3,4],
+            [0,5],[5,6],[6,7],[7,8],
+            [0,9],[9,10],[10,11],[11,12],
+            [0,13],[13,14],[14,15],[15,16],
+            [0,17],[17,18],[18,19],[19,20],
+            [5,9],[9,13],[13,17]
+        ];
+        
+        canvasCtx.strokeStyle = '#00ff00';
+        canvasCtx.lineWidth = 4;
+        for (const connection of HAND_CONNECTIONS) {
+            const [start, end] = connection;
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(
+                landmarks[start].x * canvasElement.width,
+                landmarks[start].y * canvasElement.height
+            );
+            canvasCtx.lineTo(
+                landmarks[end].x * canvasElement.width,
+                landmarks[end].y * canvasElement.height
+            );
+            canvasCtx.stroke();
+        }
+        
+        canvasCtx.fillStyle = '#ff0000';
+        for (const landmark of landmarks) {
+            canvasCtx.beginPath();
+            canvasCtx.arc(
+                landmark.x * canvasElement.width,
+                landmark.y * canvasElement.height,
+                6, 0, 2 * Math.PI
+            );
+            canvasCtx.fill();
+        }
     }
-  }
+    
+    processHandLandmarks(landmarks) {
+        const wrist = landmarks[0];
+        const indexTip = landmarks[8];
+        const middleTip = landmarks[12];
 
-  function startGame(level) {
-    level = level || 1;
-    state.level = level;
-    state.lives = 3; state.score = 0; state.gameState = 'playing'; state.waitingForRestart = false;
-    const sp = state.levelSpeeds[level] || state.levelSpeeds[1];
-    state.ball.speedX = sp.x; state.ball.speedY = sp.y;
-    state.ball.x = canvasGame.width / 2; state.ball.y = canvasGame.height - 180; state.ball.active = true;
-    createBricks();
-    hideAllMenus();
-    updateUI();
-  }
-
-  function handleButtonClick(button) {
-    const action = button.dataset.action || button.dataset.level;
-    switch(action) {
-      case 'start': startGame(1); break;
-      case 'levels': showLevelsMenu(); break;
-      case 'exit': exitToIntroScreen(); break;
-      case 'back': showMainMenu(); break;
-      case 'resume': resumeGame(); break;
-      case 'menu': showMainMenu(); break;
-      case 'nextLevel': nextLevel(); break;
-      case 'retry': retryLevel(); break;
-      case '1': case '2': case '3': startGame(parseInt(action)); break;
-      default: if (button.dataset && button.dataset.level) startGame(parseInt(button.dataset.level)); break;
+        this.gestureState.palmBase = {
+            x: (1 - wrist.x) * canvasElement.width,
+            y: wrist.y * canvasElement.height
+        };
+        
+        this.gestureState.indexTip = {
+            x: (1 - indexTip.x) * canvasElement.width,
+            y: indexTip.y * canvasElement.height
+        };
+        
+        this.gestureState.middleTip = {
+            x: (1 - middleTip.x) * canvasElement.width,
+            y: middleTip.y * canvasElement.height
+        };
+        
+        this.gestureState.fingersUp = this.countFingersUp(landmarks);
+        this.gestureState.fist = this.isFist(landmarks);
+        this.gestureState.vGesture = this.isVGesture(landmarks);
+        
+        const clickDistance = Math.sqrt(
+            Math.pow(this.gestureState.indexTip.x - this.gestureState.middleTip.x, 2) +
+            Math.pow(this.gestureState.indexTip.y - this.gestureState.middleTip.y, 2)
+        );
+        
+        const now = Date.now();
+        
+        if (clickDistance < 40 && !this.gestureState.clickActive && 
+            (now - this.gestureState.lastClickTime) > 500) {
+            this.gestureState.clickActive = true;
+            this.gestureState.lastClickTime = now;
+            this.handleGestureClick();
+        } else if (clickDistance >= 40) {
+            this.gestureState.clickActive = false;
+        }
+        
+        document.getElementById('fingersCount').textContent = this.gestureState.fingersUp;
+        
+        let estado = '🖐️ MOVIMIENTO - Plataforma';
+        if (this.gestureState.fist) {
+            estado = '✊ PUÑO - Pausa';
+        } else if (clickDistance < 40) {
+            estado = '👆 CLIC - Botones';
+        } else if (this.gestureState.vGesture) {
+            estado = '✌️ V - Seleccionar Nivel';
+        }
+        document.getElementById('gestureState').textContent = estado;
+        
+        if (this.gameState === 'playing' && !this.waitingForRestart) {
+            this.movePlatformWithHand();
+        }
+        
+        if (this.gestureState.fist) {
+            if (this.fistStartTime === 0) {
+                this.fistStartTime = now;
+            } else if (this.gameState === 'playing' && !this.waitingForRestart && (now - this.fistStartTime) > 500) {
+                this.pauseGame();
+                this.fistStartTime = 0;
+            }
+        } else {
+            this.fistStartTime = 0;
+        }
+        
+        this.handleButtonHover();
+        
+        if (this.gameState === 'levels' && this.gestureState.vGesture) {
+            this.handleLevelSelection();
+        }
     }
-  }
-
-  function exitToIntroScreen() {
-    state.gameState = 'intro';
-    hideAllMenus();
-    if (gameScreen) gameScreen.style.display = 'none';
-    if (introScreen) introScreen.style.display = 'flex';
-    stopCamera();
-  }
-
-  function nextLevel(){ if (state.level < 3) startGame(state.level+1); else showWinMenu(); }
-  function retryLevel(){ startGame(state.level); }
-  function pauseGame(){ if (state.gameState === 'playing' && !state.waitingForRestart){ state.gameState = 'paused'; showPauseMenu(); } }
-  function resumeGame(){ if (state.gameState === 'paused'){ state.gameState = 'playing'; hideAllMenus(); } }
-  function showMainMenu(){ state.gameState='menu'; hideAllMenus(); const m=document.getElementById('mainMenu'); if(m) m.style.display='block'; }
-  function showLevelsMenu(){ state.gameState='levels'; hideAllMenus(); const m=document.getElementById('levelsMenu'); if(m) m.style.display='block'; }
-  function showPauseMenu(){ hideAllMenus(); const m=document.getElementById('pauseMenu'); if(m) m.style.display='block'; }
-  function showWinMenu(){ state.gameState='win'; hideAllMenus(); if (!state.completedLevels.includes(state.level)) state.completedLevels.push(state.level); if (state.completedLevels.length===3) showGameCompleteMenu(); else { const title=document.getElementById('winTitle'); if(title) title.textContent=`¡Ganaste Nivel ${state.level}!`; const scoreEl=document.getElementById('winScore'); if(scoreEl) scoreEl.textContent=state.score; const btn=document.querySelector('#winMenu [data-action="nextLevel"]'); if(btn){ if(state.level<3){ btn.textContent=`CONTINUAR NIVEL ${state.level+1}`; btn.style.display='block'; } else { btn.textContent='¡JUEGO COMPLETADO!'; btn.style.display='none'; } } const m=document.getElementById('winMenu'); if(m) m.style.display='block'; } }
-  function showGameCompleteMenu(){ state.gameState='complete'; hideAllMenus(); const t=document.getElementById('completeTitle'); if(t) t.textContent='¡FELICIDADES!'; const st=document.getElementById('completeSubtitle'); if(st) st.textContent='Has completado todos los niveles'; const sc=document.getElementById('completeScore'); if(sc) sc.textContent=state.score; const m=document.getElementById('gameCompleteMenu'); if(m) m.style.display='block'; }
-  function showLoseMenu(){ state.gameState='lose'; hideAllMenus(); const lv=document.getElementById('loseLevel'); if(lv) lv.textContent=state.level; const sc=document.getElementById('loseScore'); if(sc) sc.textContent=state.score; const m=document.getElementById('loseMenu'); if(m) m.style.display='block'; }
-  function hideAllMenus(){ document.querySelectorAll('.menu, .life-lost-message').forEach(x=>x.style.display='none'); }
-  function updateUI(){ const l=document.getElementById('livesCount'); if(l) l.textContent=state.lives; const s=document.getElementById('scoreCount'); if(s) s.textContent=state.score; const lv=document.getElementById('levelCount'); if(lv) lv.textContent=state.level; }
-
-  // ---------- Physics update & draw ----------
-  function update() {
-    if (state.gameState !== 'playing' || state.waitingForRestart) return;
-
-    state.ball.x += state.ball.speedX;
-    state.ball.y += state.ball.speedY;
-
-    // walls
-    if (state.ball.x - state.ball.radius <= 0 || state.ball.x + state.ball.radius >= canvasGame.width) state.ball.speedX = -state.ball.speedX;
-    if (state.ball.y - state.ball.radius <= 0) state.ball.speedY = -state.ball.speedY;
-
-    // floor
-    if (state.ball.y + state.ball.radius >= canvasGame.height) {
-      state.lives--; updateUI();
-      if (state.lives <= 0) { state.gameState = 'lose'; showLoseMenu(); }
-      else { state.waitingForRestart = true; showLifeLostMessage(); }
+    
+    isVGesture(landmarks) {
+        const indexTip = landmarks[8];
+        const middleTip = landmarks[12];
+        const ringTip = landmarks[16];
+        const pinkyTip = landmarks[20];
+        const indexPip = landmarks[6];
+        const middlePip = landmarks[10];
+        const ringPip = landmarks[14];
+        const pinkyPip = landmarks[18];
+        
+        const indexUp = indexTip.y < indexPip.y;
+        const middleUp = middleTip.y < middlePip.y;
+        const ringDown = ringTip.y > ringPip.y;
+        const pinkyDown = pinkyTip.y > pinkyPip.y;
+        
+        return indexUp && middleUp && ringDown && pinkyDown;
     }
-
-    // platform collision
-    if (state.ball.y + state.ball.radius >= state.platform.y &&
-        state.ball.y - state.ball.radius <= state.platform.y + state.platform.height &&
-        state.ball.x >= state.platform.x &&
-        state.ball.x <= state.platform.x + state.platform.width) {
-      state.ball.speedY = -Math.abs(state.ball.speedY);
-      const hitPos = (state.ball.x - state.platform.x) / state.platform.width;
-      state.ball.speedX = 15 * (hitPos - 0.5);
+    
+    handleLevelSelection() {
+        const levelOptions = document.querySelectorAll('.level-option');
+        let selectedLevel = null;
+        
+        levelOptions.forEach(option => {
+            const rect = option.getBoundingClientRect();
+            option.classList.remove('selected');
+            
+            if (this.gestureState.indexTip.x >= rect.left && 
+                this.gestureState.indexTip.x <= rect.right &&
+                this.gestureState.indexTip.y >= rect.top && 
+                this.gestureState.indexTip.y <= rect.bottom) {
+                option.classList.add('selected');
+                selectedLevel = parseInt(option.dataset.level);
+            }
+        });
+        
+        if (selectedLevel && this.gestureState.vGesture) {
+            setTimeout(() => {
+                if (this.gestureState.vGesture) {
+                    this.startGame(selectedLevel);
+                }
+            }, 800);
+        }
     }
-
-    // bricks collision
-    for (let b of state.bricks) {
-      if (b.active && checkCollision(b)) {
-        b.active = false;
-        state.ball.speedY = -state.ball.speedY;
-        state.score += 10; updateUI();
-      }
+    
+    countFingersUp(landmarks) {
+        let count = 0;
+        const fingerTips = [8, 12, 16, 20];
+        const fingerPips = [6, 10, 14, 18];
+        
+        for (let i = 0; i < fingerTips.length; i++) {
+            if (landmarks[fingerTips[i]].y < landmarks[fingerPips[i]].y) {
+                count++;
+            }
+        }
+        
+        if (landmarks[4].x < landmarks[3].x) count++;
+        
+        return count;
     }
-
-    // win check
-    if (state.bricks.filter(b=>b.active).length === 0) { state.gameState = 'win'; showWinMenu(); }
-  }
-
-  function checkCollision(b) {
-    return state.ball.x + state.ball.radius >= b.x &&
-           state.ball.x - state.ball.radius <= b.x + b.width &&
-           state.ball.y + state.ball.radius >= b.y &&
-           state.ball.y - state.ball.radius <= b.y + b.height;
-  }
-
-  function draw() {
-    if (!ctxGame || !canvasGame) return;
-    ctxGame.clearRect(0,0,canvasGame.width,canvasGame.height);
-
-    // platform
-    const platformImg = (images.platform && images.platform.complete) ? images.platform : fallback.platform;
-    ctxGame.drawImage(platformImg, state.platform.x, state.platform.y, state.platform.width, state.platform.height);
-
-    // ball
-    const ballImg = (images.ball && images.ball.complete) ? images.ball : fallback.ball;
-    ctxGame.drawImage(ballImg, state.ball.x - state.ball.radius, state.ball.y - state.ball.radius, state.ball.radius*2, state.ball.radius*2);
-
-    // bricks
-    const brickImg = (images.brick && images.brick.complete) ? images.brick : fallback.brick;
-    for (let b of state.bricks) {
-      if (!b.active) continue;
-      ctxGame.drawImage(brickImg, b.x, b.y, b.width, b.height);
+    
+    isFist(landmarks) {
+        const fingerTips = [8, 12, 16, 20];
+        const fingerPips = [6, 10, 14, 18];
+        let bentFingers = 0;
+        
+        for (let i = 0; i < fingerTips.length; i++) {
+            if (landmarks[fingerTips[i]].y > landmarks[fingerPips[i]].y) {
+                bentFingers++;
+            }
+        }
+        
+        return bentFingers >= 3;
     }
-  }
-
-  function loop() {
-    update(); draw();
-    requestAnimationFrame(loop);
-  }
-
-  // ---------- Lifecycle ----------
-  async function startApp() {
-    if (introScreen) introScreen.style.display = 'none';
-    if (gameScreen) gameScreen.style.display = 'block';
-    state.gameState = 'menu';
-    resizeAll();
-    createBricks();
-    attachMenuListeners();
-    setupStartButton(); // in case not set
-    // initialize mediapipe camera (ask permission)
-    try {
-      await startCameraAndHands();
-    } catch (e) {
-      console.warn('No se pudo iniciar MediaPipe:', e);
+    
+    movePlatformWithHand() {
+        const gameX = this.gestureState.palmBase.x;
+        this.platform.x = gameX - this.platform.width / 2;
+        
+        if (this.platform.x < 0) this.platform.x = 0;
+        if (this.platform.x + this.platform.width > this.canvas.width) {
+            this.platform.x = this.canvas.width - this.platform.width;
+        }
     }
-    showMainMenu();
-  }
-
-  async function startCameraAndHands() {
-    // request camera permission + start mediapipe
-    try {
-      // try standard getUserMedia first to ensure permission prompt
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: window.innerWidth, height: window.innerHeight } });
-        // attach to videoElement so MP Camera can reuse or we stop and hand over to Camera(); we stop immediately and let Camera() request device again (but permission is set)
-        videoElement.srcObject = stream;
-        // we keep stream for short time then stop (Camera will create its own)
-        setTimeout(()=> {
-          try { stream.getTracks().forEach(t=>t.stop()); } catch(e) {}
-        }, 200);
-      }
-    } catch(e) {
-      console.warn('getUserMedia warning:', e);
+    
+    handleButtonHover() {
+        const activeMenus = document.querySelectorAll('.menu');
+        let hoverButton = null;
+        
+        activeMenus.forEach(menu => {
+            const style = window.getComputedStyle(menu);
+            if (style.display !== 'none') {
+                const buttons = menu.querySelectorAll('.menu-button, .level-option');
+                
+                buttons.forEach(button => {
+                    const rect = button.getBoundingClientRect();
+                    button.classList.remove('selected');
+                    
+                    if (this.gestureState.indexTip.x >= rect.left && 
+                        this.gestureState.indexTip.x <= rect.right &&
+                        this.gestureState.indexTip.y >= rect.top && 
+                        this.gestureState.indexTip.y <= rect.bottom) {
+                        hoverButton = button;
+                        button.classList.add('selected');
+                    }
+                });
+            }
+        });
+        
+        this.gestureState.hoverButton = hoverButton;
     }
-    await setupMediaPipe();
-  }
+    
+    handleGestureClick() {
+        if (this.gestureState.hoverButton) { 
+            this.gestureState.hoverButton.style.background = '#ffff00';
+            setTimeout(() => {
+                if (this.gestureState.hoverButton) {
+                    this.gestureState.hoverButton.style.background = '';
+                }
+            }, 200);
+            
+            this.handleButtonClick(this.gestureState.hoverButton);
+        }
+    }
+    
+    createBricks() {
+        this.bricks = [];
+        const rows = 2;
+        const cols = 8;
+        const brickWidth = 120;
+        const brickHeight = 45;
+        const padding = 8;
+        
+        const totalWidth = cols * (brickWidth + padding) - padding;
+        const startX = (this.canvas.width - totalWidth) / 2;
+        
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                this.bricks.push({
+                    x: startX + col * (brickWidth + padding),
+                    y: 100 + row * (brickHeight + padding),
+                    width: brickWidth,
+                    height: brickHeight,
+                    active: true
+                });
+            }
+        }
+    }
+    
+    async showLifeLostMessage() {
+        if (this.lives > 0) {
+            const message = document.getElementById('lifeLostMessage');
+            const text = document.getElementById('lifeLostText');
+            const timer = document.getElementById('lifeLostTimer');
+            
+            text.textContent = `Te quedan ${this.lives} vidas`;
+            message.style.display = 'block';
+            
+            for (let i = 3; i > 0; i--) {
+                timer.textContent = `Continuando en ${i} segundos...`;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            message.style.display = 'none';
+            this.waitingForRestart = false;
+            
+            this.ball.x = this.canvas.width / 2;
+            this.ball.y = this.canvas.height - 180;
+            this.ball.speedX = this.levelSpeeds[this.level].x;
+            this.ball.speedY = this.levelSpeeds[this.level].y;
+        }
+    }
+    
+    startGame(level) {
+        this.level = level;
+        this.lives = 3;
+        this.score = 0;
+        this.gameState = 'playing';
+        this.waitingForRestart = false;
+        
+        const speed = this.levelSpeeds[level];
+        this.ball.speedX = speed.x;
+        this.ball.speedY = speed.y;
+        
+        this.ball.x = this.canvas.width / 2;
+        this.ball.y = this.canvas.height - 180;
+        this.ball.active = true;
+        
+        this.createBricks();
+        this.hideAllMenus();
+        this.updateUI();
+    }
+    
+    handleButtonClick(button) {
+        const action = button.dataset.action || button.dataset.level;
+        
+        switch(action) {
+            case 'start':
+                this.startGame(1);
+                break;
+            case 'levels':
+                this.showLevelsMenu();
+                break;
+            case 'exit':
+                window.location.href = 'index.html';
+                break;
+            case 'back':
+                this.showMainMenu();
+                break;
+            case 'resume':
+                this.resumeGame();
+                break;
+            case 'menu':
+                this.showMainMenu();
+                break;
+            case 'nextLevel':
+                this.nextLevel();
+                break;
+            case 'retry':
+                this.retryLevel();
+                break;
+            case '1':
+            case '2':
+            case '3':
+                this.startGame(parseInt(action));
+                break;
+        }
+    }
+    
+    nextLevel() {
+        if (this.level < 3) {
+            this.startGame(this.level + 1);
+        } else {
+            this.showWinMenu();
+        }
+    }
+    
+    retryLevel() {
+        this.startGame(this.level);
+    }
+    
+    pauseGame() {
+        if (this.gameState === 'playing' && !this.waitingForRestart) {
+            this.gameState = 'paused';
+            this.showPauseMenu();
+        }
+    }
+    
+    resumeGame() {
+        if (this.gameState === 'paused') {
+            this.gameState = 'playing';
+            this.hideAllMenus();
+        }
+    }
+    
+    showMainMenu() {
+        this.gameState = 'menu';
+        this.hideAllMenus();
+        document.getElementById('mainMenu').style.display = 'block';
+    }
+    
+    showLevelsMenu() {
+        this.gameState = 'levels';
+        this.hideAllMenus();
+        document.getElementById('levelsMenu').style.display = 'block';
+    }
+    
+    showPauseMenu() {
+        this.hideAllMenus();
+        document.getElementById('pauseMenu').style.display = 'block';
+    }
+    
+    showWinMenu() {
+        this.gameState = 'win';
+        this.hideAllMenus();
+        
+        if (!this.completedLevels.includes(this.level)) {
+            this.completedLevels.push(this.level);
+        }
+        
+        if (this.completedLevels.length === 3) {
+            this.showGameCompleteMenu();
+        } else {
+            document.getElementById('winTitle').textContent = `¡Ganaste el Nivel ${this.level}!`;
+            document.getElementById('winScore').textContent = this.score;
+            
+            const nextLevelButton = document.querySelector('#winMenu [data-action="nextLevel"]');
+            if (this.level < 3) {
+                nextLevelButton.textContent = `CONTINUAR NIVEL ${this.level + 1}`;
+                nextLevelButton.style.display = 'block';
+            } else {
+                nextLevelButton.textContent = '¡JUEGO COMPLETADO!';
+                nextLevelButton.style.display = 'none';
+            }
+            
+            document.getElementById('winMenu').style.display = 'block';
+        }
+    }
+    
+    showGameCompleteMenu() {
+        this.gameState = 'complete';
+        this.hideAllMenus();
+        document.getElementById('completeTitle').textContent = '¡FELICIDADES!';
+        document.getElementById('completeSubtitle').textContent = 'Has completado todos los niveles';
+        document.getElementById('completeScore').textContent = this.score;
+        document.getElementById('gameCompleteMenu').style.display = 'block';
+    }
+    
+    showLoseMenu() {
+        this.gameState = 'lose';
+        this.hideAllMenus();
+        document.getElementById('loseLevel').textContent = this.level;
+        document.getElementById('loseScore').textContent = this.score;
+        document.getElementById('loseMenu').style.display = 'block';
+    }
+    
+    hideAllMenus() {
+        const menus = document.querySelectorAll('.menu, .life-lost-message');
+        menus.forEach(menu => menu.style.display = 'none');
+    }
+    
+    updateUI() {
+        document.getElementById('livesCount').textContent = this.lives;
+        document.getElementById('scoreCount').textContent = this.score;
+        document.getElementById('levelCount').textContent = this.level;
+    }
+    
+    update() {
+        if (this.gameState !== 'playing' || this.waitingForRestart) return;
+        
+        this.ball.x += this.ball.speedX;
+        this.ball.y += this.ball.speedY;
+        
+        if (this.ball.x - this.ball.radius <= 0 || 
+            this.ball.x + this.ball.radius >= this.canvas.width) {
+            this.ball.speedX = -this.ball.speedX;
+        }
+        
+        if (this.ball.y - this.ball.radius <= 0) {
+            this.ball.speedY = -this.ball.speedY;
+        }
+        
+        if (this.ball.y + this.ball.radius >= this.canvas.height) {
+            this.lives--;
+            this.updateUI();
+            
+            if (this.lives <= 0) {
+                this.gameState = 'lose';
+                this.showLoseMenu();
+            } else {
+                this.waitingForRestart = true;
+                this.showLifeLostMessage();
+            }
+        }
+        
+        if (this.ball.y + this.ball.radius >= this.platform.y &&
+            this.ball.y - this.ball.radius <= this.platform.y + this.platform.height &&
+            this.ball.x >= this.platform.x &&
+            this.ball.x <= this.platform.x + this.platform.width) {
+            
+            this.ball.speedY = -Math.abs(this.ball.speedY);
+            const hitPos = (this.ball.x - this.platform.x) / this.platform.width;
+            this.ball.speedX = 15 * (hitPos - 0.5);
+        }
+        
+        for (let brick of this.bricks) {
+            if (brick.active && this.checkCollision(brick)) {
+                brick.active = false;
+                this.ball.speedY = -this.ball.speedY;
+                this.score += 10;
+                this.updateUI();
+            }
+        }
+        
+        const activeBricks = this.bricks.filter(brick => brick.active);
+        if (activeBricks.length === 0) {
+            this.gameState = 'win';
+            this.showWinMenu();
+        }
+    }
+    
+    checkCollision(brick) {
+        return this.ball.x + this.ball.radius >= brick.x &&
+               this.ball.x - this.ball.radius <= brick.x + brick.width &&
+               this.ball.y + this.ball.radius >= brick.y &&
+               this.ball.y - this.ball.radius <= brick.y + brick.height;
+    }
+    
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        if (this.images.platform.complete) {
+            this.ctx.drawImage(this.images.platform, this.platform.x, this.platform.y, this.platform.width, this.platform.height);
+        }
+        
+        if (this.images.ball.complete) {
+            this.ctx.drawImage(this.images.ball, this.ball.x - this.ball.radius, this.ball.y - this.ball.radius, this.ball.radius * 2, this.ball.radius * 2);
+        }
+        
+        this.bricks.forEach(brick => {
+            if (brick.active && this.images.brick.complete) {
+                this.ctx.drawImage(this.images.brick, brick.x, brick.y, brick.width, brick.height);
+            }
+        });
+    }
+    
+    gameLoop() {
+        this.update();
+        this.draw();
+        requestAnimationFrame(() => this.gameLoop());
+    }
+}
 
-  // Expose small helpers to window for debugging (optional)
-  window.RompeBricksDebug = {
-    state, startApp, startCameraAndHands, stopCamera
-  };
-
-  // init on DOMContentLoaded
-  function initOnLoad() {
-    canvasGame = document.getElementById('gameCanvas'); ctxGame = canvasGame ? canvasGame.getContext('2d') : null;
-    resizeAll();
-    setupStartButton();
-    attachMenuListeners();
-    // start the render loop even if not started playing
-    requestAnimationFrame(loop);
-  }
-  window.addEventListener('DOMContentLoaded', initOnLoad);
-
-  // helper: expose startApp to global (so external button can call)
-  window.startApp = startApp;
-
-})(); // EOF
-
-
+// Inicializar el juego cuando se carga la página
+window.addEventListener('DOMContentLoaded', () => {
+    new RompeBloquesGame();
+});
