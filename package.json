@@ -4,6 +4,6 @@
   "type": "module",
   "scripts": {
     "dev": "python -m http.server 8000",
-    "build": "echo 'No build necesario para archivos estáticos'"
+    "build": "node build.js"
   }
 }
