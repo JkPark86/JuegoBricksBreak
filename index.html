@@ -1,116 +1,300 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ROMPEBLOQUES - Edición Minecraft</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROMPEBLOQUES - Edición Minecraft</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-  <!-- Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        body {
+            background-color: #000;
+            color: #0f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
 
-  <!-- MediaPipe -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+        .container {
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+            border: 2px solid #0f0;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+            background-color: rgba(10, 20, 10, 0.8);
+            position: relative;
+        }
 
-  <link rel="stylesheet" href="./src/style.css">
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #0f0;
+            letter-spacing: 2px;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #0f0;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        .preview-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #0f0;
+            border-radius: 8px;
+            background-color: rgba(0, 20, 0, 0.5);
+        }
+
+        .preview-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #0f0;
+        }
+
+        .preview-image {
+            width: 100%;
+            max-width: 600px;
+            height: 300px;
+            background-color: #111;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0f0;
+            font-style: italic;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 600 300"><rect width="600" height="300" fill="%23001100"/><text x="300" y="150" font-family="Arial" font-size="20" fill="%2300ff00" text-anchor="middle">Vista previa del juego ROMPEBLOQUES</text></svg>');
+        }
+
+        .instructions {
+            text-align: left;
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #0f0;
+            border-radius: 8px;
+            background-color: rgba(0, 20, 0, 0.5);
+        }
+
+        .instructions h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: #0f0;
+            text-align: center;
+        }
+
+        .control-item {
+            margin: 10px 0;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .control-item input[type="checkbox"] {
+            margin-right: 10px;
+            accent-color: #0f0;
+        }
+
+        .control-item label {
+            font-size: 1.1rem;
+        }
+
+        .start-button {
+            background-color: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            border-radius: 5px;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .start-button:hover {
+            background-color: #0f0;
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
+        }
+
+        .camera-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #0f0;
+            border-radius: 8px;
+            background-color: rgba(0, 20, 0, 0.5);
+        }
+
+        .camera-feed {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            background-color: #111;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            margin: 10px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0f0;
+        }
+
+        .camera-button {
+            background-color: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            padding: 8px 15px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .camera-button:hover {
+            background-color: #0f0;
+            color: #000;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #0a0;
+            text-align: center;
+        }
+
+        /* Efectos de neón */
+        .neon-text {
+            text-shadow: 0 0 5px #0f0, 0 0 10px #0f0, 0 0 15px #0f0, 0 0 20px #0f0;
+        }
+
+        .neon-border {
+            box-shadow: 0 0 5px #0f0, 0 0 10px #0f0, inset 0 0 5px #0f0;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1 class="neon-text">ROMPEBLOQUES</h1>
+        <h2>Edición Minecraft</h2>
 
-  <!-- INTRO -->
-  <div id="introScreen" class="container text-center d-flex flex-column justify-content-center align-items-center" style="min-height:100vh;">
-    <h1 class="game-title mb-2">ROMPEBLOQUES</h1>
-    <h3 class="subtitle mb-4">Edición Minecraft</h3>
-
-    <img src="./pantalla.png" alt="preview" class="preview-image mb-4" style="max-width:600px;">
-
-    <div class="instructions p-3 mb-3" style="max-width:720px;">
-      <h5 class="text-success">Instrucciones de Control con Gestos:</h5>
-      <ul style="text-align:left;">
-        <li>✋ Mover la palma horizontalmente para desplazar la plataforma.</li>
-        <li>🖖 Acercar índice+medio para "clic" sobre botones (hover + clic).</li>
-        <li>✊ Puño para pausar.</li>
-        <li>✌️ V para seleccionar nivel.</li>
-      </ul>
-    </div>
-
-    <button id="startGame" class="btn start-button">INICIAR JUEGO</button>
-  </div>
-
-  <!-- GAME -->
-  <div id="gameScreen" class="game-container" style="display:none;">
-    <div id="cameraBackground">
-      <video id="webcam" autoplay playsinline></video>
-      <canvas id="output_canvas"></canvas>
-    </div>
-
-    <canvas id="gameCanvas"></canvas>
-
-    <div class="game-ui">
-      <div class="stats">
-        Vidas: <span id="livesCount">3</span> &nbsp;&nbsp; Puntaje: <span id="scoreCount">0</span> &nbsp;&nbsp; Nivel: <span id="levelCount">1</span>
-      </div>
-
-      <!-- Tus menús aquí (sin cambios) -->
-      <div id="mainMenu" class="menu">
-        <h2>MENÚ PRINCIPAL</h2>
-        <button class="menu-button" data-action="start">COMENZAR</button>
-        <button class="menu-button" data-action="levels">NIVELES</button>
-        <button class="menu-button" data-action="exit">SALIR</button>
-      </div>
-
-      <div id="levelsMenu" class="menu" style="display:none;">
-        <h2>SELECCIONA NIVEL</h2>
-        <div class="level-options">
-          <div class="level-option" data-level="1"><h4>NIVEL 1</h4><small>Dificultad baja</small></div>
-          <div class="level-option" data-level="2"><h4>NIVEL 2</h4><small>Dificultad media</small></div>
-          <div class="level-option" data-level="3"><h4>NIVEL 3</h4><small>Dificultad alta</small></div>
+        <div class="preview-section">
+            <div class="preview-title">Preview</div>
+            <div class="preview-image">
+               <img src="pantalla.png" alt="Vista previa del juego" style="width:100%; height:auto; max-height:300px; object-fit:contain;">
+                Vista previa del juego
+            </div>
         </div>
-        <button class="menu-button" data-action="back">VOLVER</button>
-      </div>
 
-      <div id="pauseMenu" class="menu" style="display:none;">
-        <h2>PAUSA</h2>
-        <button class="menu-button" data-action="resume">CONTINUAR</button>
-        <button class="menu-button" data-action="menu">MENÚ</button>
-        <button class="menu-button" data-action="exit">SALIR</button>
-      </div>
+        <div class="instructions">
+            <h3>Instrucciones de Control con Gestos:</h3>
+            <div class="control-item">
+                <input type="checkbox" id="move">
+                <label for="move">Mover la palma horizontalmente para desplazar la plataforma.</label>
+            </div>
+            <div class="control-item">
+                <input type="checkbox" id="click" checked>
+                <label for="click">Acercar índice+medio para "clic" sobre botones (hover + clic).</label>
+            </div>
+            <div class="control-item">
+                <input type="checkbox" id="pause" checked>
+                <label for="pause">Puño para pausar.</label>
+            </div>
+            <div class="control-item">
+                <input type="checkbox" id="select" checked>
+                <label for="select">V para seleccionar nivel.</label>
+            </div>
+        </div>
 
-      <div id="winMenu" class="menu" style="display:none;">
-        <h2 id="winTitle">¡GANASTE!</h2>
-        <p>Puntaje: <span id="winScore">0</span></p>
-        <button class="menu-button" data-action="nextLevel">CONTINUAR</button>
-        <button class="menu-button" data-action="menu">MENÚ</button>
-        <button class="menu-button" data-action="exit">SALIR</button>
-      </div>
+        <div class="camera-section">
+            <h3>Cámara para Detección de Gestos</h3>
+            <div class="camera-feed" id="cameraFeed">
+                Cámara no activada
+            </div>
+            <div>
+                <button class="camera-button" id="startCamera">Iniciar Cámara</button>
+                <button class="camera-button" id="stopCamera" disabled>Detener Cámara</button>
+            </div>
+        </div>
 
-      <div id="loseMenu" class="menu" style="display:none;">
-        <h2>PERDISTE</h2>
-        <p>Puntaje: <span id="loseScore">0</span></p>
-        <button class="menu-button" data-action="retry">REINTENTAR</button>
-        <button class="menu-button" data-action="menu">MENÚ</button>
-        <button class="menu-button" data-action="exit">SALIR</button>
-      </div>
+        <button class="start-button neon-border" id="startGame">INICIAR JUEGO</button>
 
-      <div id="gameCompleteMenu" class="menu" style="display:none;">
-        <h2>¡FELICIDADES! COMPLETASTE TODO</h2>
-        <p>Puntuación final: <span id="completeScore">0</span></p>
-        <button class="menu-button" data-action="menu">VOLVER AL MENÚ</button>
-      </div>
-
-      <div id="lifeLostMessage" class="life-lost-message">
-        <div id="lifeLostText">Te quedan X vidas</div>
-        <div id="lifeLostTimer">Continuando en 3...</div>
-      </div>
+        <div class="footer">
+            ROMPEBLOQUES - Edición Minecraft | Control por gestos
+        </div>
     </div>
 
-    <div class="gesture-info">
-      <div>Dedos: <span id="fingersCount">0</span></div>
-      <div>Estado: <span id="gestureState">Esperando...</span></div>
-    </div>
-  </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const startCameraBtn = document.getElementById('startCamera');
+            const stopCameraBtn = document.getElementById('stopCamera');
+            const cameraFeed = document.getElementById('cameraFeed');
+            const startGameBtn = document.getElementById('startGame');
+            
+            let stream = null;
 
-  <!-- Cargar el script del juego -->
-  <script type="module" src="./src/game.js"></script>
+            // Función para iniciar la cámara
+            startCameraBtn.addEventListener('click', async function() {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    cameraFeed.innerHTML = '<video autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>';
+                    const video = cameraFeed.querySelector('video');
+                    video.srcObject = stream;
+                    
+                    startCameraBtn.disabled = true;
+                    stopCameraBtn.disabled = false;
+                    
+                    console.log("Cámara iniciada correctamente");
+                } catch (error) {
+                    console.error("Error al acceder a la cámara:", error);
+                    cameraFeed.innerHTML = "Error: No se pudo acceder a la cámara";
+                }
+            });
+
+            // Función para detener la cámara
+            stopCameraBtn.addEventListener('click', function() {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    cameraFeed.innerHTML = "Cámara no activada";
+                    
+                    startCameraBtn.disabled = false;
+                    stopCameraBtn.disabled = true;
+                    
+                    console.log("Cámara detenida");
+                }
+            });
+
+            // Función para iniciar el juego
+            startGameBtn.addEventListener('click', function() {
+                alert("¡Iniciando ROMPEBLOQUES! La funcionalidad completa del juego se cargará a continuación.");
+                // Aquí iría la lógica para cargar y comenzar el juego
+                
+                // Simulación de inicio del juego
+                startGameBtn.textContent = "JUEGO EN CURSO...";
+                startGameBtn.disabled = true;
+                
+                setTimeout(() => {
+                    startGameBtn.textContent = "INICIAR JUEGO";
+                    startGameBtn.disabled = false;
+                    alert("Juego finalizado (simulación)");
+                }, 3000);
+            });
+        });
+    </script>
 </body>
 </html>
