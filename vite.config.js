@@ -2,5 +2,19 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   root: ".",
-  base: "./", // rutas relativas para que funcione en Vercel y GitHub Pages
+  base: "./",
+  publicDir: "public",
+  build: {
+    outDir: "dist",
+    assetsDir: "assets",
+    rollupOptions: {
+      input: {
+        main: "./index.html"
+      }
+    }
+  },
+  server: {
+    host: true,
+    port: 3000
+  }
 });

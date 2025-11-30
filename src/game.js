@@ -24,9 +24,9 @@
     brick: new Image()
   };
   // Rutas (debe haber estos archivos en public/)
-  images.platform.src = '/tierra.png';
-  images.ball.src     = '/esfera.png';
-  images.brick.src    = '/ladrillo.png';
+images.platform.src = './public/tierra.png';
+images.ball.src     = './public/esfera.png'; 
+images.brick.src    = './public/ladrillo.png';
 
   // Fallback generator
   function createFallback(w, h, color, type) {

@@ -5,35 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ROMPEBLOQUES - Edición Minecraft</title>
 
-  <!-- Bootstrap (opcional) -->
+  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-  <!-- MediaPipe (classic) - NOTA: se cargan como scripts normales -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <!-- MediaPipe -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
-  <style>
-    /* (Breve copia del CSS, suficiente para que se vea bien) */
-    html,body { height:100%; margin:0; font-family:Arial, sans-serif; background: linear-gradient(135deg,#0a0a0a,#1a1a1a); color:#fff; overflow:hidden; }
-    .game-title { color:#00ff00; text-shadow:0 0 10px #00ff00; font-weight:bold; }
-    .subtitle { color:#00ff00; }
-    .preview-image { border:3px solid #00ff00; border-radius:10px; box-shadow:0 0 20px rgba(0,255,0,0.25); }
-    .start-button { background:#00ff00; color:#000; border:none; font-weight:bold; padding:15px 40px; font-size:1.1rem; }
-    .game-container { position:relative; width:100vw; height:100vh; }
-    #cameraBackground { position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
-    #webcam, #output_canvas { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
-    #gameCanvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:2; }
-    .game-ui { position:absolute; top:0; left:0; width:100%; height:100%; z-index:3; pointer-events:none; }
-    .stats { position:absolute; top:18px; left:18px; background:rgba(0,0,0,0.75); padding:12px 18px; border-radius:12px; border:3px solid #00ff00; color:#00ff00; font-weight:bold; z-index:4; pointer-events:auto;}
-    .menu { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.95); padding:36px; border-radius:14px; border:4px solid #00ff00; min-width:420px; z-index:5; text-align:center; pointer-events:auto; }
-    .menu-button { display:block; width:100%; background:#00ff00; color:#000; border:none; padding:15px; margin:12px 0; border-radius:10px; font-weight:bold; cursor:pointer; }
-    .menu-button:hover { background:#ffff00; transform:scale(1.02); }
-    .level-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0; }
-    .level-option { background:rgba(0,255,0,0.12); padding:12px; border-radius:10px; border:2px solid #00ff00; cursor:pointer; }
-    .gesture-info { position:absolute; right:18px; bottom:18px; z-index:6; background:rgba(0,0,0,0.75); padding:12px; border-radius:10px; border:3px solid #00ff00; color:#00ff00; pointer-events:none; }
-    .life-lost-message { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:7; display:none; background:rgba(0,0,0,0.95); padding:30px; border-radius:12px; border:4px solid #ff0000; color:#ff0000; font-weight:bold; }
-  </style>
+  <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
 
@@ -42,7 +22,7 @@
     <h1 class="game-title mb-2">ROMPEBLOQUES</h1>
     <h3 class="subtitle mb-4">Edición Minecraft</h3>
 
-    <img src="pantalla.png" alt="preview" class="preview-image mb-4" style="max-width:600px;">
+    <img src="./pantalla.png" alt="preview" class="preview-image mb-4" style="max-width:600px;">
 
     <div class="instructions p-3 mb-3" style="max-width:720px;">
       <h5 class="text-success">Instrucciones de Control con Gestos:</h5>
@@ -71,6 +51,7 @@
         Vidas: <span id="livesCount">3</span> &nbsp;&nbsp; Puntaje: <span id="scoreCount">0</span> &nbsp;&nbsp; Nivel: <span id="levelCount">1</span>
       </div>
 
+      <!-- Tus menús aquí (sin cambios) -->
       <div id="mainMenu" class="menu">
         <h2>MENÚ PRINCIPAL</h2>
         <button class="menu-button" data-action="start">COMENZAR</button>
@@ -129,8 +110,7 @@
     </div>
   </div>
 
-  <!-- Cargar el script del juego (archivo plano, sin module) -->
-  <script type="module" src="./game.js"></script>
+  <!-- Cargar el script del juego -->
+  <script type="module" src="./src/game.js"></script>
 </body>
 </html>
-
