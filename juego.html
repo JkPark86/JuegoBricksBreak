@@ -128,6 +128,33 @@
             background: #ffff00;
             transform: scale(1.05);
         }
+
+        .level-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .level-option {
+            background: rgba(0, 255, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.3s;
+        }
+
+        .level-option.selected {
+            background: rgba(0, 255, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        .level-option h3 {
+            margin-bottom: 5px;
+        }
         
         .gesture-info {
             position: absolute;
@@ -166,18 +193,46 @@
             <div id="mainMenu" class="menu">
                 <h2>ROMPEBLOQUES</h2>
                 <button class="menu-button" onclick="game.startGame(1)">COMENZAR JUEGO</button>
+                <button class="menu-button" onclick="game.showLevelsMenu()">SELECCIONAR NIVEL</button>
                 <button class="menu-button" onclick="window.location.href='index.html'">VOLVER AL INICIO</button>
+            </div>
+
+            <div id="levelsMenu" class="menu hidden">
+                <h2>SELECCIONAR NIVEL</h2>
+                <div class="level-options">
+                    <div class="level-option" data-level="1">
+                        <h3>NIVEL 1</h3>
+                        <p>Fácil</p>
+                        <small>Gesto: ✌️</small>
+                    </div>
+                    <div class="level-option" data-level="2">
+                        <h3>NIVEL 2</h3>
+                        <p>Medio</p>
+                        <small>Gesto: ✌️</small>
+                    </div>
+                    <div class="level-option" data-level="3">
+                        <h3>NIVEL 3</h3>
+                        <p>Difícil</p>
+                        <small>Gesto: ✌️</small>
+                    </div>
+                </div>
+                <button class="menu-button" onclick="game.showMainMenu()">VOLVER</button>
+            </div>
+
+            <div id="pauseMenu" class="menu hidden">
+                <h2>JUEGO PAUSADO</h2>
+                <button class="menu-button" onclick="game.resumeGame()">CONTINUAR</button>
+                <button class="menu-button" onclick="game.showMainMenu()">MENÚ PRINCIPAL</button>
             </div>
         </div>
         
         <div class="gesture-info">
             <div>Estado: <span id="gestureState">Iniciando cámara...</span></div>
-            <div>Dedos: <span id="fingersCount">0</span></div>
+            <div>Gesto: <span id="currentGesture">-</span></div>
         </div>
     </div>
 
     <script>
-        // Juego simplificado y funcional
         class RompeBloquesGame {
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
@@ -186,9 +241,62 @@
                 this.canvasElement = document.getElementById('output_canvas');
                 this.canvasCtx = this.canvasElement.getContext('2d');
                 
+                // Cargar imágenes
+                this.images = {
+                    platform: new Image(),
+                    ball: new Image(),
+                    brick: new Image()
+                };
+                
+                this.images.platform.src = 'tierra.png';
+                this.images.ball.src = 'esfera.png';
+                this.images.brick.src = 'ladrillo.png';
+                
                 this.setupCanvas();
                 this.initGame();
                 this.setupMediaPipe();
+                this.setupFallbackImages();
+            }
+
+            setupFallbackImages() {
+                // Fallback para plataforma
+                this.images.platform.onerror = () => {
+                    this.images.platform = this.createFallbackImage(150, 20, '#00ff00');
+                };
+                
+                // Fallback para pelota
+                this.images.ball.onerror = () => {
+                    this.images.ball = this.createFallbackImage(24, 24, '#ffffff', true);
+                };
+                
+                // Fallback para ladrillos
+                this.images.brick.onerror = () => {
+                    this.images.brick = this.createFallbackImage(80, 30, '#ff0000');
+                };
+            }
+
+            createFallbackImage(width, height, color, isCircle = false) {
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                
+                if (isCircle) {
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(width/2, height/2, width/2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = color;
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(0, 0, width, height);
+                }
+                
+                const img = new Image();
+                img.src = canvas.toDataURL();
+                return img;
             }
 
             setupCanvas() {
@@ -219,6 +327,13 @@
                 this.score = 0;
                 this.level = 1;
                 this.gameActive = false;
+                this.gamePaused = false;
+                
+                this.gestureState = {
+                    lastClickTime: 0,
+                    hoverButton: null,
+                    currentGesture: 'none'
+                };
                 
                 this.createBricks();
                 this.updateUI();
@@ -250,7 +365,7 @@
                     });
                     
                     await camera.start();
-                    document.getElementById('gestureState').textContent = 'Cámara activa - Mueve tu mano';
+                    document.getElementById('gestureState').textContent = 'Cámara activa';
                     
                 } catch (error) {
                     console.error('Error iniciando cámara:', error);
@@ -266,7 +381,7 @@
                     this.canvasCtx.drawImage(results.image, 0, 0, this.canvasElement.width, this.canvasElement.height);
                 }
                 
-                if (results.multiHandLandmarks && this.gameActive) {
+                if (results.multiHandLandmarks) {
                     for (const landmarks of results.multiHandLandmarks) {
                         this.drawHandLandmarks(landmarks);
                         this.processHandLandmarks(landmarks);
@@ -277,7 +392,6 @@
             }
 
             drawHandLandmarks(landmarks) {
-                // Dibujar puntos de la mano
                 this.canvasCtx.fillStyle = '#00ff00';
                 for (const landmark of landmarks) {
                     this.canvasCtx.beginPath();
@@ -291,42 +405,124 @@
             }
 
             processHandLandmarks(landmarks) {
-                if (!this.gameActive) return;
+                if (!this.gameActive || this.gamePaused) return;
 
-                // Usar la muñeca para controlar la plataforma
+                // Control de plataforma con la palma
                 const wrist = landmarks[0];
                 const gameX = wrist.x * this.canvas.width;
-                
                 this.platform.x = gameX - this.platform.width / 2;
                 
-                // Limitar la plataforma dentro de la pantalla
                 if (this.platform.x < 0) this.platform.x = 0;
                 if (this.platform.x + this.platform.width > this.canvas.width) {
                     this.platform.x = this.canvas.width - this.platform.width;
                 }
 
-                // Detectar gestos básicos
+                // Detectar gestos
                 this.detectGestures(landmarks);
             }
 
             detectGestures(landmarks) {
                 const fingersUp = this.countFingersUp(landmarks);
-                document.getElementById('fingersCount').textContent = fingersUp;
+                const isFist = this.isFist(landmarks);
+                const isVGesture = this.isVGesture(landmarks);
+                const isClickGesture = this.isClickGesture(landmarks);
 
-                // Gestos simples
-                if (fingersUp === 0) {
-                    document.getElementById('gestureState').textContent = '✊ PUÑO - Juego en curso';
-                } else if (fingersUp === 2) {
-                    document.getElementById('gestureState').textContent = '✌️ V - Moviendo plataforma';
-                } else {
-                    document.getElementById('gestureState').textContent = '🖐️ MOVIENDO - Plataforma';
+                let gestureName = 'Moviendo plataforma';
+                let gestureIcon = '👐';
+
+                if (isFist) {
+                    gestureName = 'PUÑO - Pausar juego';
+                    gestureIcon = '✊';
+                    this.handleFistGesture();
+                } else if (isVGesture) {
+                    gestureName = 'V - Seleccionar nivel';
+                    gestureIcon = '✌️';
+                    this.handleVGesture();
+                } else if (isClickGesture) {
+                    gestureName = 'CLIC - Botones';
+                    gestureIcon = '🖖';
+                    this.handleClickGesture();
+                } else if (fingersUp > 0) {
+                    gestureName = `MOVIENDO - ${fingersUp} dedos`;
+                    gestureIcon = '🖐️';
+                }
+
+                document.getElementById('currentGesture').textContent = `${gestureIcon} ${gestureName}`;
+            }
+
+            isFist(landmarks) {
+                const fingerTips = [8, 12, 16, 20];
+                const fingerPips = [6, 10, 14, 18];
+                let bentFingers = 0;
+
+                for (let i = 0; i < fingerTips.length; i++) {
+                    if (landmarks[fingerTips[i]].y > landmarks[fingerPips[i]].y) {
+                        bentFingers++;
+                    }
+                }
+                return bentFingers >= 3;
+            }
+
+            isVGesture(landmarks) {
+                const indexTip = landmarks[8];
+                const middleTip = landmarks[12];
+                const ringTip = landmarks[16];
+                const pinkyTip = landmarks[20];
+                const indexPip = landmarks[6];
+                const middlePip = landmarks[10];
+                const ringPip = landmarks[14];
+                const pinkyPip = landmarks[18];
+
+                const indexUp = indexTip.y < indexPip.y;
+                const middleUp = middleTip.y < middlePip.y;
+                const ringDown = ringTip.y > ringPip.y;
+                const pinkyDown = pinkyTip.y > pinkyPip.y;
+
+                return indexUp && middleUp && ringDown && pinkyDown;
+            }
+
+            isClickGesture(landmarks) {
+                const indexTip = landmarks[8];
+                const middleTip = landmarks[12];
+                const thumbTip = landmarks[4];
+
+                const indexMiddleDist = Math.sqrt(
+                    Math.pow(indexTip.x - middleTip.x, 2) + 
+                    Math.pow(indexTip.y - middleTip.y, 2)
+                );
+
+                const indexThumbDist = Math.sqrt(
+                    Math.pow(indexTip.x - thumbTip.x, 2) + 
+                    Math.pow(indexTip.y - thumbTip.y, 2)
+                );
+
+                return indexMiddleDist < 0.05 && indexThumbDist > 0.1;
+            }
+
+            handleFistGesture() {
+                if (this.gameActive && !this.gamePaused) {
+                    this.pauseGame();
+                }
+            }
+
+            handleVGesture() {
+                if (this.gameActive && !this.gamePaused) {
+                    this.showLevelsMenu();
+                }
+            }
+
+            handleClickGesture() {
+                const now = Date.now();
+                if (now - this.gestureState.lastClickTime > 500) {
+                    this.gestureState.lastClickTime = now;
+                    // Aquí se puede agregar lógica para click en botones
                 }
             }
 
             countFingersUp(landmarks) {
                 let count = 0;
-                const fingerTips = [8, 12, 16, 20]; // Índice, medio, anular, meñique
-                const fingerPips = [6, 10, 14, 18]; // Articulaciones
+                const fingerTips = [8, 12, 16, 20];
+                const fingerPips = [6, 10, 14, 18];
 
                 for (let i = 0; i < fingerTips.length; i++) {
                     if (landmarks[fingerTips[i]].y < landmarks[fingerPips[i]].y) {
@@ -334,7 +530,6 @@
                     }
                 }
 
-                // Pulgar
                 if (landmarks[4].x < landmarks[3].x) {
                     count++;
                 }
@@ -368,9 +563,43 @@
                 this.lives = 3;
                 this.score = 0;
                 this.gameActive = true;
-                document.getElementById('mainMenu').classList.add('hidden');
+                this.gamePaused = false;
+                this.hideAllMenus();
+                this.createBricks();
+                this.resetBall();
                 this.updateUI();
                 this.gameLoop();
+            }
+
+            showMainMenu() {
+                this.gameActive = false;
+                this.hideAllMenus();
+                document.getElementById('mainMenu').classList.remove('hidden');
+            }
+
+            showLevelsMenu() {
+                this.hideAllMenus();
+                document.getElementById('levelsMenu').classList.remove('hidden');
+            }
+
+            pauseGame() {
+                if (this.gameActive && !this.gamePaused) {
+                    this.gamePaused = true;
+                    this.hideAllMenus();
+                    document.getElementById('pauseMenu').classList.remove('hidden');
+                }
+            }
+
+            resumeGame() {
+                if (this.gamePaused) {
+                    this.gamePaused = false;
+                    this.hideAllMenus();
+                }
+            }
+
+            hideAllMenus() {
+                const menus = document.querySelectorAll('.menu');
+                menus.forEach(menu => menu.classList.add('hidden'));
             }
 
             updateUI() {
@@ -380,13 +609,11 @@
             }
 
             update() {
-                if (!this.gameActive) return;
+                if (!this.gameActive || this.gamePaused) return;
 
-                // Mover pelota
                 this.ball.x += this.ball.speedX;
                 this.ball.y += this.ball.speedY;
 
-                // Rebotes en paredes
                 if (this.ball.x - this.ball.radius <= 0 || this.ball.x + this.ball.radius >= this.canvas.width) {
                     this.ball.speedX = -this.ball.speedX;
                 }
@@ -394,7 +621,6 @@
                     this.ball.speedY = -this.ball.speedY;
                 }
 
-                // Caída
                 if (this.ball.y + this.ball.radius >= this.canvas.height) {
                     this.lives--;
                     this.updateUI();
@@ -405,7 +631,6 @@
                     }
                 }
 
-                // Colisión con plataforma
                 if (this.ball.y + this.ball.radius >= this.platform.y &&
                     this.ball.y - this.ball.radius <= this.platform.y + this.platform.height &&
                     this.ball.x >= this.platform.x &&
@@ -414,7 +639,6 @@
                     this.ball.speedX = (this.ball.x - (this.platform.x + this.platform.width / 2)) * 0.2;
                 }
 
-                // Colisión con bloques
                 this.bricks.forEach(brick => {
                     if (brick.active && this.checkCollision(brick)) {
                         brick.active = false;
@@ -422,7 +646,6 @@
                         this.score += 10;
                         this.updateUI();
 
-                        // Verificar si ganó
                         if (this.bricks.every(b => !b.active)) {
                             this.levelComplete();
                         }
@@ -456,37 +679,48 @@
             gameOver() {
                 this.gameActive = false;
                 alert(`¡Game Over! Puntaje final: ${this.score}`);
-                document.getElementById('mainMenu').classList.remove('hidden');
-                this.initGame();
+                this.showMainMenu();
             }
 
             draw() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-                // Dibujar plataforma
-                this.ctx.fillStyle = '#00ff00';
-                this.ctx.fillRect(this.platform.x, this.platform.y, this.platform.width, this.platform.height);
+                // Dibujar plataforma con imagen
+                if (this.images.platform.complete) {
+                    this.ctx.drawImage(this.images.platform, this.platform.x, this.platform.y, this.platform.width, this.platform.height);
+                } else {
+                    this.ctx.fillStyle = '#00ff00';
+                    this.ctx.fillRect(this.platform.x, this.platform.y, this.platform.width, this.platform.height);
+                }
 
-                // Dibujar pelota
-                this.ctx.fillStyle = '#ffffff';
-                this.ctx.beginPath();
-                this.ctx.arc(this.ball.x, this.ball.y, this.ball.radius, 0, Math.PI * 2);
-                this.ctx.fill();
+                // Dibujar pelota con imagen
+                if (this.images.ball.complete) {
+                    this.ctx.drawImage(this.images.ball, this.ball.x - this.ball.radius, this.ball.y - this.ball.radius, this.ball.radius * 2, this.ball.radius * 2);
+                } else {
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.ball.x, this.ball.y, this.ball.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
 
-                // Dibujar bloques
-                this.ctx.fillStyle = '#ff0000';
+                // Dibujar bloques con imagen
                 this.bricks.forEach(brick => {
                     if (brick.active) {
-                        this.ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
-                        this.ctx.strokeStyle = '#aa0000';
-                        this.ctx.lineWidth = 2;
-                        this.ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
+                        if (this.images.brick.complete) {
+                            this.ctx.drawImage(this.images.brick, brick.x, brick.y, brick.width, brick.height);
+                        } else {
+                            this.ctx.fillStyle = '#ff0000';
+                            this.ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+                            this.ctx.strokeStyle = '#aa0000';
+                            this.ctx.lineWidth = 2;
+                            this.ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
+                        }
                     }
                 });
             }
 
             gameLoop() {
-                if (this.gameActive) {
+                if (this.gameActive && !this.gamePaused) {
                     this.update();
                     this.draw();
                     requestAnimationFrame(() => this.gameLoop());
@@ -494,10 +728,17 @@
             }
         }
 
-        // Inicializar el juego cuando se carga la página
         let game;
         window.addEventListener('DOMContentLoaded', () => {
             game = new RompeBloquesGame();
+            
+            // Event listeners para botones de nivel
+            document.querySelectorAll('.level-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const level = parseInt(this.dataset.level);
+                    game.startGame(level);
+                });
+            });
         });
     </script>
 </body>
