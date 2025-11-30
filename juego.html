@@ -44,6 +44,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transform: scaleX(-1); /* Esto corrige la inversión */
         }
         
         #output_canvas {
@@ -53,6 +54,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transform: scaleX(-1); /* Esto también */
         }
         
         #gameCanvas {
@@ -172,6 +174,19 @@
         .hidden {
             display: none !important;
         }
+
+        .debug-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ff0000;
+            color: #ff0000;
+            font-size: 12px;
+            z-index: 6;
+        }
     </style>
 </head>
 <body>
@@ -230,6 +245,10 @@
             <div>Estado: <span id="gestureState">Iniciando cámara...</span></div>
             <div>Gesto: <span id="currentGesture">-</span></div>
         </div>
+
+        <div class="debug-info" id="debugInfo" style="display: none;">
+            Debug: <span id="debugText"></span>
+        </div>
     </div>
 
     <script>
@@ -241,16 +260,16 @@
                 this.canvasElement = document.getElementById('output_canvas');
                 this.canvasCtx = this.canvasElement.getContext('2d');
                 
-                // Cargar imágenes
+                // Cargar imágenes con rutas correctas
                 this.images = {
                     platform: new Image(),
                     ball: new Image(),
                     brick: new Image()
                 };
                 
-                this.images.platform.src = 'tierra.png';
-                this.images.ball.src = 'esfera.png';
-                this.images.brick.src = 'ladrillo.png';
+                this.images.platform.src = './tierra.png';
+                this.images.ball.src = './esfera.png';
+                this.images.brick.src = './ladrillo.png';
                 
                 this.setupCanvas();
                 this.initGame();
@@ -259,18 +278,19 @@
             }
 
             setupFallbackImages() {
-                // Fallback para plataforma
+                // Fallbacks para las imágenes
                 this.images.platform.onerror = () => {
+                    console.log('Fallback para plataforma');
                     this.images.platform = this.createFallbackImage(150, 20, '#00ff00');
                 };
                 
-                // Fallback para pelota
                 this.images.ball.onerror = () => {
+                    console.log('Fallback para pelota');
                     this.images.ball = this.createFallbackImage(24, 24, '#ffffff', true);
                 };
                 
-                // Fallback para ladrillos
                 this.images.brick.onerror = () => {
+                    console.log('Fallback para ladrillos');
                     this.images.brick = this.createFallbackImage(80, 30, '#ff0000');
                 };
             }
@@ -331,7 +351,8 @@
                 
                 this.gestureState = {
                     lastClickTime: 0,
-                    hoverButton: null,
+                    lastFistTime: 0,
+                    lastVGestureTime: 0,
                     currentGesture: 'none'
                 };
                 
@@ -365,7 +386,7 @@
                     });
                     
                     await camera.start();
-                    document.getElementById('gestureState').textContent = 'Cámara activa';
+                    document.getElementById('gestureState').textContent = 'Cámara activa - Mueve tu mano';
                     
                 } catch (error) {
                     console.error('Error iniciando cámara:', error);
@@ -407,9 +428,10 @@
             processHandLandmarks(landmarks) {
                 if (!this.gameActive || this.gamePaused) return;
 
-                // Control de plataforma con la palma
+                // CORREGIDO: Usar posición invertida para que coincida con el movimiento
                 const wrist = landmarks[0];
-                const gameX = wrist.x * this.canvas.width;
+                const gameX = (1 - wrist.x) * this.canvas.width; // Esto corrige la inversión
+                
                 this.platform.x = gameX - this.platform.width / 2;
                 
                 if (this.platform.x < 0) this.platform.x = 0;
@@ -422,6 +444,7 @@
             }
 
             detectGestures(landmarks) {
+                const now = Date.now();
                 const fingersUp = this.countFingersUp(landmarks);
                 const isFist = this.isFist(landmarks);
                 const isVGesture = this.isVGesture(landmarks);
@@ -430,24 +453,28 @@
                 let gestureName = 'Moviendo plataforma';
                 let gestureIcon = '👐';
 
-                if (isFist) {
+                if (isFist && (now - this.gestureState.lastFistTime > 1000)) {
                     gestureName = 'PUÑO - Pausar juego';
                     gestureIcon = '✊';
+                    this.gestureState.lastFistTime = now;
                     this.handleFistGesture();
-                } else if (isVGesture) {
+                } else if (isVGesture && (now - this.gestureState.lastVGestureTime > 1000)) {
                     gestureName = 'V - Seleccionar nivel';
                     gestureIcon = '✌️';
+                    this.gestureState.lastVGestureTime = now;
                     this.handleVGesture();
-                } else if (isClickGesture) {
+                } else if (isClickGesture && (now - this.gestureState.lastClickTime > 500)) {
                     gestureName = 'CLIC - Botones';
                     gestureIcon = '🖖';
+                    this.gestureState.lastClickTime = now;
                     this.handleClickGesture();
-                } else if (fingersUp > 0) {
-                    gestureName = `MOVIENDO - ${fingersUp} dedos`;
-                    gestureIcon = '🖐️';
                 }
 
                 document.getElementById('currentGesture').textContent = `${gestureIcon} ${gestureName}`;
+                
+                // Debug info
+                document.getElementById('debugText').textContent = `Dedos: ${fingersUp}, Fist: ${isFist}, V: ${isVGesture}, Click: ${isClickGesture}`;
+                document.getElementById('debugInfo').style.display = 'block';
             }
 
             isFist(landmarks) {
@@ -491,12 +518,7 @@
                     Math.pow(indexTip.y - middleTip.y, 2)
                 );
 
-                const indexThumbDist = Math.sqrt(
-                    Math.pow(indexTip.x - thumbTip.x, 2) + 
-                    Math.pow(indexTip.y - thumbTip.y, 2)
-                );
-
-                return indexMiddleDist < 0.05 && indexThumbDist > 0.1;
+                return indexMiddleDist < 0.05;
             }
 
             handleFistGesture() {
@@ -512,11 +534,8 @@
             }
 
             handleClickGesture() {
-                const now = Date.now();
-                if (now - this.gestureState.lastClickTime > 500) {
-                    this.gestureState.lastClickTime = now;
-                    // Aquí se puede agregar lógica para click en botones
-                }
+                // Para futura implementación de clicks en botones
+                console.log('Click gesture detected');
             }
 
             countFingersUp(landmarks) {
@@ -530,6 +549,7 @@
                     }
                 }
 
+                // Pulgar (detección simplificada)
                 if (landmarks[4].x < landmarks[3].x) {
                     count++;
                 }
@@ -685,7 +705,7 @@
             draw() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-                // Dibujar plataforma con imagen
+                // Dibujar plataforma
                 if (this.images.platform.complete) {
                     this.ctx.drawImage(this.images.platform, this.platform.x, this.platform.y, this.platform.width, this.platform.height);
                 } else {
@@ -693,7 +713,7 @@
                     this.ctx.fillRect(this.platform.x, this.platform.y, this.platform.width, this.platform.height);
                 }
 
-                // Dibujar pelota con imagen
+                // Dibujar pelota
                 if (this.images.ball.complete) {
                     this.ctx.drawImage(this.images.ball, this.ball.x - this.ball.radius, this.ball.y - this.ball.radius, this.ball.radius * 2, this.ball.radius * 2);
                 } else {
@@ -703,7 +723,7 @@
                     this.ctx.fill();
                 }
 
-                // Dibujar bloques con imagen
+                // Dibujar bloques
                 this.bricks.forEach(brick => {
                     if (brick.active) {
                         if (this.images.brick.complete) {

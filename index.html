@@ -25,7 +25,8 @@
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
             max-width: 600px;
             width: 100%;
-            height: auto;
+            height: 300px;
+            object-fit: cover;
         }
         .instructions {
             background: rgba(0, 255, 0, 0.1);
@@ -57,6 +58,14 @@
             font-size: 1.5rem;
             margin-right: 10px;
         }
+        .fallback-preview {
+            border: 3px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            background: rgba(0, 255, 0, 0.05);
+            max-width: 600px;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body class="d-flex justify-content-center align-items-center">
@@ -65,16 +74,22 @@
         <h2 class="subtitle mb-4">Edición Minecraft</h2>
         
         <div class="game-preview mb-4">
-            <img src="pantalla.png" alt="Vista previa del juego" class="preview-image img-fluid" onerror="this.style.display='none'">
+            <img src="./pantalla.png" alt="Vista previa del juego" class="preview-image img-fluid" id="previewImage">
+            <div id="fallbackPreview" class="fallback-preview" style="display: none;">
+                <h4 class="text-success mb-3">Vista previa del juego ROMPEBLOQUES</h4>
+                <div style="width: 100%; height: 200px; background: linear-gradient(45deg, #00ff00, #008800); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: black; font-weight: bold; font-size: 1.5rem;">
+                    🎮 CONTROL POR GESTOS
+                </div>
+            </div>
         </div>
         
         <div class="instructions text-start">
             <h3 class="text-success mb-3">Instrucciones de Control con Gestos 🟡:</h3>
             <ul class="list-unstyled">
                 <li class="mb-2"><span class="gesture-icon">👐</span> Movimiento Derecha a Izquierda con la palma de la mano para controlar la plataforma.</li>
-                <li class="mb-2"><span class="gesture-icon">🖖</span> Dos dedos juntos (índice y medio) para hacer clic en los botones (excepto al seleccionar un nivel).</li>
+                <li class="mb-2"><span class="gesture-icon">🖖</span> Dos dedos juntos (índice y medio) para hacer clic en los botones.</li>
                 <li class="mb-2"><span class="gesture-icon">✊</span> Puño cerrado para pausar el juego.</li>
-                <li class="mb-2"><span class="gesture-icon">✌️</span> Dos dedos separados en forma de V (índice y medio) para seleccionar un nivel en Niveles.</li>
+                <li class="mb-2"><span class="gesture-icon">✌️</span> Dos dedos separados en forma de V para seleccionar nivel.</li>
             </ul>
         </div>
         
@@ -86,21 +101,26 @@
             window.location.href = 'juego.html';
         });
 
-        // Fallback si la imagen no carga
-        window.addEventListener('load', function() {
-            const img = document.querySelector('.preview-image');
-            if (img && img.naturalHeight === 0) {
-                img.style.display = 'none';
-                document.querySelector('.game-preview').innerHTML = `
-                    <div style="border: 3px solid #00ff00; border-radius: 10px; padding: 20px; background: rgba(0, 255, 0, 0.05);">
-                        <h4 class="text-success mb-3">Vista previa del juego</h4>
-                        <div style="width: 100%; height: 200px; background: linear-gradient(45deg, #00ff00, #008800); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: black; font-weight: bold;">
-                            ROMPEBLOQUES - Control por Gestos
-                        </div>
-                    </div>
-                `;
+        // Manejar carga de imagen
+        const previewImage = document.getElementById('previewImage');
+        const fallbackPreview = document.getElementById('fallbackPreview');
+        
+        previewImage.onload = function() {
+            fallbackPreview.style.display = 'none';
+        };
+        
+        previewImage.onerror = function() {
+            previewImage.style.display = 'none';
+            fallbackPreview.style.display = 'block';
+        };
+        
+        // Verificar después de 2 segundos por si acaso
+        setTimeout(() => {
+            if (previewImage.naturalHeight === 0) {
+                previewImage.style.display = 'none';
+                fallbackPreview.style.display = 'block';
             }
-        });
+        }, 2000);
     </script>
 </body>
 </html>
