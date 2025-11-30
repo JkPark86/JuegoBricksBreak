@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: "./",
+  root: ".",
+  base: "./", // rutas relativas para que funcione en Vercel y GitHub Pages
 });
