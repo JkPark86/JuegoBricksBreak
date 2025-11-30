@@ -29,7 +29,6 @@ class RompeBloquesGame {
             brick: new Image()
         };
 
-        // Asegúrate que las rutas sean correctas, si están en la raíz del proyecto
         this.images.platform.src = '/tierra.png';
         this.images.ball.src = '/esfera.png';
         this.images.brick.src = '/ladrillo.png';
@@ -56,7 +55,7 @@ class RompeBloquesGame {
         this.lives = 3;
         this.score = 0;
         this.level = 1;
-        this.gameState = 'intro'; // Estado inicial: intro
+        this.gameState = 'intro';
         this.waitingForRestart = false;
         this.fistStartTime = 0;
         this.completedLevels = [];
@@ -82,15 +81,12 @@ class RompeBloquesGame {
             3: { x: 16, y: -16 }
         };
         
-        // Inicialización diferida: solo crea el loop. La cámara y los ladrillos 
-        // se crean al llamar a this.init() en startApp().
+        // ** NUEVA BANDERA **
+        this.isMediaPipeInitialized = false; 
+
         this.gameLoop();
-        
-        // ** SE ELIMINÓ LA LLAMADA A this.setupStartButton(); **
     }
     
-    // ** SE ELIMINÓ LA FUNCIÓN setupStartButton() **
-
     startApp() {
         // 1. Esconder la pantalla de introducción
         introScreen.style.display = 'none';
@@ -138,8 +134,10 @@ class RompeBloquesGame {
     }
     
     async init() {
-        // Inicializa MediaPipe solo cuando se va a usar el juego
-        await this.setupMediaPipe();
+        // ** SOLO INICIA MEDIAPIPE SI NO SE HA HECHO ANTES **
+        if (!this.isMediaPipeInitialized) {
+            await this.setupMediaPipe();
+        }
         this.createBricks();
     }
     
@@ -149,6 +147,9 @@ class RompeBloquesGame {
                 console.error('MediaPipe Hands, Camera o videoElement no están definidos.');
                 return;
             }
+            
+            // Si ya está inicializado, sal.
+            if (this.isMediaPipeInitialized) return;
 
             this.hands = new Hands({
                 locateFile: (file) => {
@@ -165,6 +166,9 @@ class RompeBloquesGame {
             
             this.hands.onResults(this.onHandResults.bind(this));
             
+            // ** CORRECCIÓN CLAVE: Inicializar el motor WASM de forma explícita **
+            await this.hands.initialize();
+            
             this.camera = new Camera(videoElement, {
                 onFrame: async () => {
                     await this.hands.send({ image: videoElement });
@@ -175,13 +179,16 @@ class RompeBloquesGame {
             
             await this.camera.start();
             
+            // Marca como inicializado solo después de que todo haya tenido éxito
+            this.isMediaPipeInitialized = true; 
+            
         } catch (error) {
             console.error('Error MediaPipe:', error);
         }
     }
     
     onHandResults(results) {
-        if (!canvasCtx) return; // Chequeo de seguridad
+        if (!canvasCtx) return;
 
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
@@ -397,7 +404,6 @@ class RompeBloquesGame {
     }
     
     handleButtonHover() {
-        // SOLO MUESTRA HOVER SI NO ESTÁS EN LA PANTALLA INTRO
         if (this.gameState === 'intro') return;
         
         const activeMenus = document.querySelectorAll('.menu');
@@ -427,7 +433,6 @@ class RompeBloquesGame {
     }
     
     handleGestureClick() {
-        // El botón de la pantalla de introducción usa el listener estándar, no el gesto
         if (this.gameState === 'intro') return;
 
         if (this.gestureState.hoverButton) { 
@@ -550,9 +555,8 @@ class RompeBloquesGame {
         this.gameState = 'intro';
         this.hideAllMenus();
         gameScreen.style.display = 'none';
-        introScreen.style.display = 'flex'; // Usar flex para centrar
+        introScreen.style.display = 'flex';
         
-        // Detener la cámara si es necesario
         if (this.camera && this.camera.stream) {
             this.camera.stream.getTracks().forEach(track => track.stop());
         }
@@ -742,13 +746,11 @@ class RompeBloquesGame {
     }
 }
 
-// ** MODIFICACIÓN CLAVE **
-// Creamos una instancia del juego y conectamos el botón de inicio.
+// Inicialización de la instancia y conexión del botón
 window.addEventListener('DOMContentLoaded', () => {
     const gameInstance = new RompeBloquesGame();
     
     if (startGameButton) {
-        // Al hacer clic en el botón, se llama al método startApp() de la instancia
         startGameButton.addEventListener('click', () => {
             gameInstance.startApp();
         });
