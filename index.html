@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ROMPEBLOQUES - Edición Minecraft</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
         * {
             margin: 0;
@@ -25,7 +29,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 1000px;
             width: 100%;
             text-align: center;
             border: 2px solid #0f0;
@@ -50,34 +54,69 @@
             text-shadow: 0 0 5px #0f0;
         }
 
-        .preview-section {
+        .game-info {
+            display: flex;
+            justify-content: space-around;
             margin: 20px 0;
             padding: 15px;
             border: 1px solid #0f0;
             border-radius: 8px;
             background-color: rgba(0, 20, 0, 0.5);
+            font-size: 1.2rem;
         }
 
-        .preview-title {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-            color: #0f0;
-        }
-
-        .preview-image {
-            width: 100%;
-            max-width: 600px;
-            height: 300px;
-            background-color: #111;
-            border: 1px solid #0f0;
-            border-radius: 5px;
-            margin: 0 auto;
+        .info-item {
             display: flex;
+            flex-direction: column;
             align-items: center;
+        }
+
+        .info-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff0;
+            text-shadow: 0 0 5px #ff0;
+        }
+
+        .game-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
             justify-content: center;
-            color: #0f0;
-            font-style: italic;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 600 300"><rect width="600" height="300" fill="%23001100"/><text x="300" y="150" font-family="Arial" font-size="20" fill="%2300ff00" text-anchor="middle">Vista previa del juego ROMPEBLOQUES</text></svg>');
+            margin: 20px 0;
+        }
+
+        .game-board {
+            width: 600px;
+            height: 400px;
+            background-color: #111;
+            border: 2px solid #0f0;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #cameraContainer {
+            width: 300px;
+            height: 400px;
+            position: relative;
+            border: 2px solid #0f0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #cameraFeed {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+        }
+
+        #outputCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
 
         .instructions {
@@ -92,7 +131,7 @@
         .instructions h3 {
             font-size: 1.3rem;
             margin-bottom: 10px;
-            color: #0f0;
+            color: #ff0;
             text-align: center;
         }
 
@@ -101,74 +140,44 @@
             padding: 8px;
             display: flex;
             align-items: center;
-        }
-
-        .control-item input[type="checkbox"] {
-            margin-right: 10px;
-            accent-color: #0f0;
-        }
-
-        .control-item label {
             font-size: 1.1rem;
         }
 
-        .start-button {
+        .gesture-icon {
+            margin-right: 10px;
+            font-size: 1.5rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .control-button {
             background-color: #000;
             color: #0f0;
             border: 2px solid #0f0;
             border-radius: 5px;
-            padding: 12px 30px;
+            padding: 12px 25px;
             font-size: 1.2rem;
             cursor: pointer;
-            margin: 20px 0;
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 1px;
             box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
         }
 
-        .start-button:hover {
+        .control-button:hover {
             background-color: #0f0;
             color: #000;
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
         }
 
-        .camera-section {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #0f0;
-            border-radius: 8px;
-            background-color: rgba(0, 20, 0, 0.5);
-        }
-
-        .camera-feed {
-            width: 100%;
-            max-width: 400px;
-            height: 300px;
-            background-color: #111;
-            border: 1px solid #0f0;
-            border-radius: 5px;
-            margin: 10px auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #0f0;
-        }
-
-        .camera-button {
-            background-color: #000;
-            color: #0f0;
-            border: 1px solid #0f0;
-            border-radius: 5px;
-            padding: 8px 15px;
-            cursor: pointer;
-            margin: 5px;
-            transition: all 0.3s ease;
-        }
-
-        .camera-button:hover {
-            background-color: #0f0;
-            color: #000;
+        .control-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .footer {
@@ -178,13 +187,63 @@
             text-align: center;
         }
 
-        /* Efectos de neón */
-        .neon-text {
-            text-shadow: 0 0 5px #0f0, 0 0 10px #0f0, 0 0 15px #0f0, 0 0 20px #0f0;
+        /* Elementos del juego */
+        #paddle {
+            position: absolute;
+            width: 100px;
+            height: 20px;
+            background: linear-gradient(to right, #0f0, #0a0);
+            border-radius: 10px;
+            bottom: 20px;
+            left: 250px;
+            box-shadow: 0 0 10px #0f0;
         }
 
-        .neon-border {
-            box-shadow: 0 0 5px #0f0, 0 0 10px #0f0, inset 0 0 5px #0f0;
+        #ball {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle at 5px 5px, #fff, #ff0);
+            border-radius: 50%;
+            box-shadow: 0 0 10px #ff0;
+        }
+
+        .brick {
+            position: absolute;
+            width: 60px;
+            height: 20px;
+            background: linear-gradient(to bottom, #f00, #800);
+            border: 1px solid #400;
+            border-radius: 3px;
+        }
+
+        .brick.green {
+            background: linear-gradient(to bottom, #0f0, #080);
+            border: 1px solid #040;
+        }
+
+        .brick.blue {
+            background: linear-gradient(to bottom, #00f, #008);
+            border: 1px solid #004;
+        }
+
+        .status-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            color: #ff0;
+            text-shadow: 0 0 10px #ff0;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        /* Efectos de neón */
+        .neon-text {
+            text-shadow: 0 0 5px #0f0, 0 0 10px #0f0, 0 0 15px #0f0;
         }
     </style>
 </head>
@@ -193,107 +252,560 @@
         <h1 class="neon-text">ROMPEBLOQUES</h1>
         <h2>Edición Minecraft</h2>
 
-        <div class="preview-section">
-            <div class="preview-title">Preview</div>
-            <div class="preview-image">
-               <img src="pantalla.png" alt="Vista previa del juego" style="width:100%; height:auto; max-height:300px; object-fit:contain;">
-                Vista previa del juego
+        <div class="game-info">
+            <div class="info-item">
+                <div>NIVEL:</div>
+                <div class="info-value" id="level">1</div>
+            </div>
+            <div class="info-item">
+                <div>PUNTOS:</div>
+                <div class="info-value" id="points">0</div>
+            </div>
+            <div class="info-item">
+                <div>VIDAS:</div>
+                <div class="info-value" id="lives">3</div>
+            </div>
+        </div>
+
+        <div class="game-container">
+            <div class="game-board">
+                <div id="paddle"></div>
+                <div id="ball"></div>
+                <div id="bricks-container"></div>
+                <div class="status-message" id="statusMessage"></div>
+            </div>
+            
+            <div id="cameraContainer">
+                <video id="cameraFeed" autoplay playsinline></video>
+                <canvas id="outputCanvas"></canvas>
             </div>
         </div>
 
         <div class="instructions">
-            <h3>Instrucciones de Control con Gestos:</h3>
+            <h3>Instrucciones de Control con Gestos 🟡️:</h3>
             <div class="control-item">
-                <input type="checkbox" id="move">
-                <label for="move">Mover la palma horizontalmente para desplazar la plataforma.</label>
+                <span class="gesture-icon">👐</span>
+                <span>Movimiento Derecha a izquierda con la palma de la mano para controlar la plataforma.</span>
             </div>
             <div class="control-item">
-                <input type="checkbox" id="click" checked>
-                <label for="click">Acercar índice+medio para "clic" sobre botones (hover + clic).</label>
+                <span class="gesture-icon">✌️</span>
+                <span>Dos dedos juntos (índice y medio) para hacer clic en los botones.</span>
             </div>
             <div class="control-item">
-                <input type="checkbox" id="pause" checked>
-                <label for="pause">Puño para pausar.</label>
+                <span class="gesture-icon">✊</span>
+                <span>Puño cerrado para pausar el juego.</span>
             </div>
             <div class="control-item">
-                <input type="checkbox" id="select" checked>
-                <label for="select">V para seleccionar nivel.</label>
+                <span class="gesture-icon">✌️</span>
+                <span>Dos dedos separados en forma de V (índice y medio) para seleccionar un nivel.</span>
             </div>
         </div>
 
-        <div class="camera-section">
-            <h3>Cámara para Detección de Gestos</h3>
-            <div class="camera-feed" id="cameraFeed">
-                Cámara no activada
-            </div>
-            <div>
-                <button class="camera-button" id="startCamera">Iniciar Cámara</button>
-                <button class="camera-button" id="stopCamera" disabled>Detener Cámara</button>
-            </div>
+        <div class="controls">
+            <button class="control-button" id="startCamera">Iniciar Cámara</button>
+            <button class="control-button" id="startGame">INICIAR JUEGO</button>
+            <button class="control-button" id="pauseGame">Pausar</button>
         </div>
-
-        <button class="start-button neon-border" id="startGame">INICIAR JUEGO</button>
 
         <div class="footer">
-            ROMPEBLOQUES - Edición Minecraft | Control por gestos
+            ROMPEBLOQUES - Edición Minecraft | Control por gestos con MediaPipe Hands
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const startCameraBtn = document.getElementById('startCamera');
-            const stopCameraBtn = document.getElementById('stopCamera');
-            const cameraFeed = document.getElementById('cameraFeed');
-            const startGameBtn = document.getElementById('startGame');
+        // Variables del juego
+        let gameActive = false;
+        let gamePaused = false;
+        let level = 1;
+        let points = 0;
+        let lives = 3;
+        let ballX = 300;
+        let ballY = 200;
+        let ballSpeedX = 3;
+        let ballSpeedY = -3;
+        let paddleX = 250;
+        let paddleWidth = 100;
+        
+        // Elementos del DOM
+        const levelElement = document.getElementById('level');
+        const pointsElement = document.getElementById('points');
+        const livesElement = document.getElementById('lives');
+        const paddleElement = document.getElementById('paddle');
+        const ballElement = document.getElementById('ball');
+        const bricksContainer = document.getElementById('bricks-container');
+        const statusMessage = document.getElementById('statusMessage');
+        const startCameraBtn = document.getElementById('startCamera');
+        const startGameBtn = document.getElementById('startGame');
+        const pauseGameBtn = document.getElementById('pauseGame');
+        
+        // Variables para detección de manos
+        let hands = null;
+        let camera = null;
+        let lastHandPosition = null;
+        let lastGesture = null;
+        let gestureCooldown = 0;
+
+        // Inicializar MediaPipe Hands
+        function initializeHands() {
+            hands = new Hands({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                }
+            });
             
-            let stream = null;
-
-            // Función para iniciar la cámara
-            startCameraBtn.addEventListener('click', async function() {
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    cameraFeed.innerHTML = '<video autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>';
-                    const video = cameraFeed.querySelector('video');
-                    video.srcObject = stream;
-                    
-                    startCameraBtn.disabled = true;
-                    stopCameraBtn.disabled = false;
-                    
-                    console.log("Cámara iniciada correctamente");
-                } catch (error) {
-                    console.error("Error al acceder a la cámara:", error);
-                    cameraFeed.innerHTML = "Error: No se pudo acceder a la cámara";
-                }
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
             });
+            
+            hands.onResults(onHandResults);
+        }
 
-            // Función para detener la cámara
-            stopCameraBtn.addEventListener('click', function() {
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                    cameraFeed.innerHTML = "Cámara no activada";
+        // Procesar resultados de detección de manos
+        function onHandResults(results) {
+            const canvas = document.getElementById('outputCanvas');
+            const video = document.getElementById('cameraFeed');
+            const canvasCtx = canvas.getContext('2d');
+            
+            // Ajustar tamaño del canvas
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Dibujar el video
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+            
+            // Si se detectan manos, procesar gestos
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                for (const landmarks of results.multiHandLandmarks) {
+                    // Dibujar landmarks de la mano
+                    drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
+                        color: '#00FF00',
+                        lineWidth: 2
+                    });
+                    drawLandmarks(canvasCtx, landmarks, {
+                        color: '#FF0000',
+                        lineWidth: 1,
+                        radius: 3
+                    });
                     
-                    startCameraBtn.disabled = false;
-                    stopCameraBtn.disabled = true;
-                    
-                    console.log("Cámara detenida");
+                    // Procesar gestos
+                    processHandGesture(landmarks);
                 }
-            });
+            }
+            
+            canvasCtx.restore();
+        }
 
-            // Función para iniciar el juego
-            startGameBtn.addEventListener('click', function() {
-                alert("¡Iniciando ROMPEBLOQUES! La funcionalidad completa del juego se cargará a continuación.");
-                // Aquí iría la lógica para cargar y comenzar el juego
+        // Procesar gestos de la mano
+        function processHandGesture(landmarks) {
+            if (!gameActive || gamePaused) return;
+            
+            // Obtener posición de la palma (muñeca)
+            const wrist = landmarks[0];
+            const palmX = wrist.x * 600; // Escalar al ancho del juego
+            
+            // Mover la plataforma según la posición de la palma
+            paddleX = palmX - paddleWidth / 2;
+            
+            // Limitar la plataforma dentro del área de juego
+            if (paddleX < 0) paddleX = 0;
+            if (paddleX > 500) paddleX = 500;
+            
+            // Actualizar posición visual de la plataforma
+            paddleElement.style.left = paddleX + 'px';
+            
+            // Detectar gestos específicos
+            detectGestures(landmarks);
+        }
+
+        // Detectar gestos específicos
+        function detectGestures(landmarks) {
+            if (gestureCooldown > 0) {
+                gestureCooldown--;
+                return;
+            }
+            
+            // Obtener puntos clave de los dedos
+            const thumbTip = landmarks[4];
+            const indexTip = landmarks[8];
+            const middleTip = landmarks[12];
+            const ringTip = landmarks[16];
+            const pinkyTip = landmarks[20];
+            
+            // Calcular distancias entre dedos
+            const indexMiddleDist = Math.sqrt(
+                Math.pow(indexTip.x - middleTip.x, 2) + 
+                Math.pow(indexTip.y - middleTip.y, 2)
+            );
+            
+            const thumbIndexDist = Math.sqrt(
+                Math.pow(thumbTip.x - indexTip.x, 2) + 
+                Math.pow(thumbTip.y - indexTip.y, 2)
+            );
+            
+            // Detectar gesto de V (índice y medio separados)
+            if (indexMiddleDist > 0.15 && thumbIndexDist > 0.2) {
+                if (lastGesture !== 'V') {
+                    console.log("Gesto V detectado - Cambiar nivel");
+                    changeLevel();
+                    gestureCooldown = 20;
+                    lastGesture = 'V';
+                }
+            }
+            // Detectar puño cerrado (todos los dedos cerca de la palma)
+            else if (isFist(landmarks)) {
+                if (lastGesture !== 'fist') {
+                    console.log("Puño detectado - Pausar juego");
+                    togglePause();
+                    gestureCooldown = 20;
+                    lastGesture = 'fist';
+                }
+            }
+            // Detectar pinza (índice y pulgar juntos)
+            else if (thumbIndexDist < 0.05) {
+                if (lastGesture !== 'pinch') {
+                    console.log("Pinza detectada - Click");
+                    // Aquí podrías implementar acciones de click
+                    gestureCooldown = 20;
+                    lastGesture = 'pinch';
+                }
+            }
+            else {
+                lastGesture = null;
+            }
+        }
+
+        // Verificar si la mano está en puño
+        function isFist(landmarks) {
+            // Simplificación: verificar si los dedos están doblados
+            const fingerTips = [8, 12, 16, 20]; // puntas de los dedos
+            const fingerBases = [5, 9, 13, 17]; // bases de los dedos
+            
+            for (let i = 0; i < fingerTips.length; i++) {
+                const tip = landmarks[fingerTips[i]];
+                const base = landmarks[fingerBases[i]];
                 
-                // Simulación de inicio del juego
-                startGameBtn.textContent = "JUEGO EN CURSO...";
-                startGameBtn.disabled = true;
+                // Si la punta del dedo está por encima de la base, no es un puño
+                if (tip.y < base.y) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
+        // Inicializar el juego
+        function initGame() {
+            resetBall();
+            createBricks();
+            updateGameInfo();
+            
+            gameActive = true;
+            gamePaused = false;
+            
+            // Iniciar el bucle del juego
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Bucle principal del juego
+        function gameLoop() {
+            if (!gameActive || gamePaused) return;
+            
+            updateBall();
+            checkCollisions();
+            checkGameStatus();
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Actualizar posición de la pelota
+        function updateBall() {
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+            
+            // Rebote en paredes laterales
+            if (ballX <= 0 || ballX >= 580) {
+                ballSpeedX = -ballSpeedX;
+            }
+            
+            // Rebote en techo
+            if (ballY <= 0) {
+                ballSpeedY = -ballSpeedY;
+            }
+            
+            // Caída por el fondo
+            if (ballY >= 400) {
+                loseLife();
+                return;
+            }
+            
+            // Actualizar posición visual
+            ballElement.style.left = ballX + 'px';
+            ballElement.style.top = ballY + 'px';
+        }
+
+        // Verificar colisiones
+        function checkCollisions() {
+            // Colisión con la plataforma
+            if (ballY + 10 >= 380 && ballY <= 385 &&
+                ballX + 10 >= paddleX && ballX <= paddleX + paddleWidth) {
                 
+                // Calcular ángulo de rebote basado en dónde golpea la plataforma
+                const hitPosition = (ballX - paddleX) / paddleWidth;
+                const angle = hitPosition * Math.PI - Math.PI / 2;
+                
+                ballSpeedX = 5 * Math.cos(angle);
+                ballSpeedY = -Math.abs(ballSpeedY);
+                
+                // Añadir puntos por golpear la plataforma
+                addPoints(5);
+            }
+            
+            // Colisión con bloques
+            const bricks = document.getElementsByClassName('brick');
+            for (let brick of bricks) {
+                if (brick.style.display !== 'none') {
+                    const brickRect = brick.getBoundingClientRect();
+                    const gameRect = document.querySelector('.game-board').getBoundingClientRect();
+                    
+                    const brickX = parseInt(brick.style.left);
+                    const brickY = parseInt(brick.style.top);
+                    const brickWidth = 60;
+                    const brickHeight = 20;
+                    
+                    // Verificar colisión
+                    if (ballX + 10 >= brickX && ballX <= brickX + brickWidth &&
+                        ballY + 10 >= brickY && ballY <= brickY + brickHeight) {
+                        
+                        // Ocultar el bloque
+                        brick.style.display = 'none';
+                        
+                        // Determinar dirección del rebote
+                        const ballCenterX = ballX + 10;
+                        const ballCenterY = ballY + 10;
+                        const brickCenterX = brickX + brickWidth / 2;
+                        const brickCenterY = brickY + brickHeight / 2;
+                        
+                        // Rebote basado en el lado de colisión
+                        if (ballCenterX < brickX || ballCenterX > brickX + brickWidth) {
+                            ballSpeedX = -ballSpeedX;
+                        } else {
+                            ballSpeedY = -ballSpeedY;
+                        }
+                        
+                        // Añadir puntos
+                        addPoints(10);
+                        
+                        // Verificar si se completó el nivel
+                        checkLevelCompletion();
+                    }
+                }
+            }
+        }
+
+        // Verificar estado del juego
+        function checkGameStatus() {
+            if (lives <= 0) {
+                gameOver();
+            }
+        }
+
+        // Reiniciar la pelota
+        function resetBall() {
+            ballX = 300;
+            ballY = 200;
+            ballSpeedX = 3 * (Math.random() > 0.5 ? 1 : -1);
+            ballSpeedY = -3;
+            
+            ballElement.style.left = ballX + 'px';
+            ballElement.style.top = ballY + 'px';
+        }
+
+        // Crear bloques
+        function createBricks() {
+            bricksContainer.innerHTML = '';
+            
+            const rows = 5;
+            const cols = 8;
+            const colors = ['', 'green', 'blue'];
+            
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const brick = document.createElement('div');
+                    brick.className = `brick ${colors[row % 3]}`;
+                    brick.style.left = (col * 70 + 20) + 'px';
+                    brick.style.top = (row * 25 + 30) + 'px';
+                    bricksContainer.appendChild(brick);
+                }
+            }
+        }
+
+        // Verificar si se completó el nivel
+        function checkLevelCompletion() {
+            const bricks = document.getElementsByClassName('brick');
+            let visibleBricks = 0;
+            
+            for (let brick of bricks) {
+                if (brick.style.display !== 'none') {
+                    visibleBricks++;
+                }
+            }
+            
+            if (visibleBricks === 0) {
+                levelComplete();
+            }
+        }
+
+        // Añadir puntos
+        function addPoints(value) {
+            points += value;
+            pointsElement.textContent = points;
+        }
+
+        // Perder una vida
+        function loseLife() {
+            lives--;
+            livesElement.textContent = lives;
+            
+            if (lives > 0) {
+                resetBall();
+                showMessage('¡Vida perdida!', 1000);
+            }
+        }
+
+        // Cambiar de nivel
+        function changeLevel() {
+            if (!gameActive) return;
+            
+            level = (level % 3) + 1; // Ciclar entre 1, 2 y 3
+            levelElement.textContent = level;
+            
+            // Ajustar dificultad según el nivel
+            ballSpeedX = (3 + level) * (Math.random() > 0.5 ? 1 : -1);
+            ballSpeedY = -(3 + level);
+            
+            createBricks();
+            resetBall();
+            
+            showMessage(`Nivel ${level}`, 1000);
+        }
+
+        // Nivel completado
+        function levelComplete() {
+            addPoints(100 * level);
+            showMessage(`¡Nivel ${level} completado!`, 2000);
+            
+            setTimeout(() => {
+                changeLevel();
+            }, 2000);
+        }
+
+        // Game over
+        function gameOver() {
+            gameActive = false;
+            showMessage('¡GAME OVER!', 3000);
+            
+            setTimeout(() => {
+                resetGame();
+            }, 3000);
+        }
+
+        // Reiniciar juego
+        function resetGame() {
+            level = 1;
+            points = 0;
+            lives = 3;
+            
+            updateGameInfo();
+            createBricks();
+            resetBall();
+            
+            gameActive = false;
+            gamePaused = false;
+            
+            startGameBtn.disabled = false;
+            pauseGameBtn.textContent = 'Pausar';
+            
+            hideMessage();
+        }
+
+        // Actualizar información del juego
+        function updateGameInfo() {
+            levelElement.textContent = level;
+            pointsElement.textContent = points;
+            livesElement.textContent = lives;
+        }
+
+        // Mostrar mensaje
+        function showMessage(text, duration) {
+            statusMessage.textContent = text;
+            statusMessage.style.display = 'block';
+            
+            if (duration) {
                 setTimeout(() => {
-                    startGameBtn.textContent = "INICIAR JUEGO";
-                    startGameBtn.disabled = false;
-                    alert("Juego finalizado (simulación)");
-                }, 3000);
+                    hideMessage();
+                }, duration);
+            }
+        }
+
+        // Ocultar mensaje
+        function hideMessage() {
+            statusMessage.style.display = 'none';
+        }
+
+        // Pausar/reanudar juego
+        function togglePause() {
+            if (!gameActive) return;
+            
+            gamePaused = !gamePaused;
+            pauseGameBtn.textContent = gamePaused ? 'Reanudar' : 'Pausar';
+            
+            if (gamePaused) {
+                showMessage('JUEGO PAUSADO');
+            } else {
+                hideMessage();
+            }
+        }
+
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar MediaPipe Hands
+            initializeHands();
+            
+            // Configurar botones
+            startCameraBtn.addEventListener('click', function() {
+                const cameraFeed = document.getElementById('cameraFeed');
+                
+                // Iniciar cámara
+                camera = new Camera(cameraFeed, {
+                    onFrame: async () => {
+                        await hands.send({image: cameraFeed});
+                    },
+                    width: 300,
+                    height: 400
+                });
+                camera.start();
+                
+                startCameraBtn.disabled = true;
+                startCameraBtn.textContent = 'Cámara Activa';
             });
+            
+            startGameBtn.addEventListener('click', function() {
+                if (!gameActive) {
+                    initGame();
+                    startGameBtn.disabled = true;
+                }
+            });
+            
+            pauseGameBtn.addEventListener('click', togglePause);
+            
+            // Inicializar elementos del juego
+            resetBall();
+            createBricks();
         });
     </script>
 </body>
