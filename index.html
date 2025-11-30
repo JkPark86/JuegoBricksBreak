@@ -1,92 +1,29 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rompe Bloques</title>
 
-    <style>
-        body {
-            background: #121212;
-            color: white;
-            margin: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-        }
-
-        .start-button {
-            animation: pulse 1.5s infinite;
-            padding: 18px 36px;
-            font-size: 1.4rem !important;
-            background: linear-gradient(45deg, #ff1493, #ff8c00);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        @keyframes pulse {
-            0%   { transform: scale(1); }
-            50%  { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-
-        .mano-emoji {
-            display: block;
-            font-size: 4rem;
-            margin: 20px auto;
-        }
-
-        .game-ui {
-            pointer-events: none;
-        }
-
-        /* Permitir que el menú sí pueda recibir clicks reales y virtuales */
-        .menu, .menu * {
-            pointer-events: auto;
-        }
-    </style>
+    <!-- Tus estilos -->
+    <link rel="stylesheet" href="/src/style.css">
 </head>
 
 <body>
 
-<div id="introScreen" class="container-fluid text-center" style="padding-top: 50px;">
-    <h1 style="font-size: 2.8rem;"><strong>ROMPE BLOQUES</strong></h1>
-    <span class="mano-emoji">👇</span>
+    <div class="container">
+        <h1>ROMPE BLOQUES</h1>
 
-    <p class="subtitle-text">
-        Controla la plataforma moviendo tu mano frente a la cámara<br>
-        ¡Rompe tantos bloques como puedas!
-    </p>
+        <img src="/public/pantalla.png" class="icono" alt="Icono">
 
-    <button id="startGame" class="btn start-button btn-lg">INICIAR JUEGO</button>
-</div>
+        <p>Controla la plataforma moviendo tu mano frente a la cámara<br>
+        ¡Rompe tantos bloques como puedas!</p>
 
-
-<!-- Pantalla del juego -->
-<div id="gameScreen" class="game-container" style="display: none;">
-    <video id="camera" autoplay playsinline style="display: none;"></video>
-    <canvas id="canvas"></canvas>
-
-    <div class="game-ui">
-        <div class="menu">
-            <div class="menu-button" data-action="pause">Pausa</div>
-            <div class="menu-button" data-action="restart">Reiniciar</div>
-            <div class="menu-button" data-action="exit">Salir</div>
-        </div>
+        <button id="start-btn">INICIAR JUEGO</button>
     </div>
-</div>
 
-
-<!-- MediaPipe -->
-<script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-
-
-<script type="module" src="/src/counter.js"></script>
-<script type="module" src="/src/game.js"></script>
-
+    <!-- Importación Vite -->
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>
+
