@@ -23,11 +23,16 @@
             border: 3px solid #00ff00;
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            height: auto;
         }
         .instructions {
             background: rgba(0, 255, 0, 0.1);
             border: 1px solid #00ff00;
             border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
         }
         .start-button {
             background: #00ff00;
@@ -36,10 +41,17 @@
             font-weight: bold;
             padding: 15px 40px;
             font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
         .start-button:hover {
             background: #00cc00;
             transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 0, 0.4);
+        }
+        .container {
+            padding: 40px 20px;
         }
     </style>
 </head>
@@ -49,16 +61,22 @@
         <h2 class="subtitle mb-4">Edición Minecraft</h2>
         
         <div class="game-preview mb-4">
-            <img src="/pantalla.png" alt="Vista previa del juego" class="preview-image img-fluid" style="max-width: 600px;">
+            <!-- Imagen de vista previa -->
+            <div style="border: 3px solid #00ff00; border-radius: 10px; padding: 20px; background: rgba(0, 255, 0, 0.05);">
+                <h4 class="text-success mb-3">Vista previa del juego</h4>
+                <div style="width: 100%; height: 200px; background: linear-gradient(45deg, #00ff00, #008800); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: black; font-weight: bold;">
+                    ROMPEBLOQUES - Control por Gestos
+                </div>
+            </div>
         </div>
         
-        <div class="instructions p-4 mb-4 text-start">
-            <h3 class="text-success mb-3">Instrucciones de Control con Gestos 🙌:</h3>
+        <div class="instructions text-start">
+            <h3 class="text-success mb-3">Instrucciones de Control con Gestos 🟡:</h3>
             <ul class="list-unstyled">
                 <li class="mb-2">✋ Movimiento Derecha a Izquierda con la palma de la mano para controlar la plataforma.</li>
-                <li class="mb-2">🖖Dos dedos juntos (índice y medio) para hacer clic en los botones (excepto al seleccionar un nivel).</li>
+                <li class="mb-2">🖖 Dos dedos juntos (índice y medio) para hacer clic en los botones (excepto al seleccionar un nivel).</li>
                 <li class="mb-2">✊ Puño cerrado para pausar el juego.</li>
-                <li class="mb-2">✌️Dos dedos separados en forma de V (indice y medio) para seleccionar un nivel en Niveles.</li>
+                <li class="mb-2">✌️ Dos dedos separados en forma de V (índice y medio) para seleccionar un nivel en Niveles.</li>
             </ul>
         </div>
         
