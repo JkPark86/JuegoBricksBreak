@@ -345,10 +345,11 @@
                 this.fistStartTime = 0;
                 this.completedLevels = [];
                 
-                // NUEVO: Variables para click prolongado
+                // NUEVO: Para el click prolongado
                 this.clickStartTime = 0;
                 this.isClicking = false;
                 this.currentHoverButton = null;
+                this.vGestureStartTime = 0;
                 
                 this.gestureState = {
                     indexTip: { x: 0, y: 0 },
@@ -375,14 +376,38 @@
             }
 
             setupFallbackImages() {
-                this.images.platform.onerror = () => {
-                    this.images.platform.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="35"><rect width="240" height="35" fill="%2300ff00"/></svg>';
-                };
-                this.images.ball.onerror = () => {
-                    this.images.ball.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><circle cx="25" cy="25" r="25" fill="%23ffffff"/></svg>';
-                };
-                this.images.brick.onerror = () => {
-                    this.images.brick.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="45"><rect width="120" height="45" fill="%23ff0000" stroke="%23aa0000" stroke-width="3"/></svg>';
+                this.createFallbackImage('platform', 240, 35, '#00ff00');
+                this.createFallbackImage('ball', 50, 50, '#ffffff');
+                this.createFallbackImage('brick', 100, 40, '#ff0000');
+            }
+
+            createFallbackImage(name, width, height, color) {
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.fillStyle = color;
+                
+                if (name === 'ball') {
+                    ctx.beginPath();
+                    ctx.arc(width/2, height/2, width/2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(0, 0, width, height);
+                    
+                    if (name === 'brick') {
+                        ctx.strokeStyle = '#aa0000';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(0, 0, width, height);
+                    }
+                }
+                
+                const img = new Image();
+                img.src = canvas.toDataURL();
+                
+                this.images[name].onerror = () => {
+                    this.images[name] = img;
                 };
             }
             
@@ -391,14 +416,6 @@
                 this.createBricks();
                 this.setupEventListeners();
                 this.gameLoop();
-            }
-
-            setupEventListeners() {
-                document.querySelectorAll('.menu-button, .level-option').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        this.handleButtonClick(e.target);
-                    });
-                });
             }
             
             async setupMediaPipe() {
@@ -525,7 +542,7 @@
                 
                 const now = Date.now();
                 
-                // CLICK ORIGINAL - NO MODIFICAR
+                // CLICK ORIGINAL - funciona en todos los botones
                 if (clickDistance < 40 && !this.gestureState.clickActive && 
                     (now - this.gestureState.lastClickTime) > 500) {
                     this.gestureState.clickActive = true;
@@ -603,6 +620,11 @@
                     this.isClicking = false;
                     this.clickStartTime = 0;
                     this.currentHoverButton = null;
+                }
+                
+                // SELECCIÓN DE NIVELES ORIGINAL
+                if (this.gameState === 'levels' && this.gestureState.vGesture) {
+                    this.handleLevelSelection();
                 }
             }
             
@@ -687,7 +709,6 @@
                 return bentFingers >= 3;
             }
             
-            // NO MODIFICAR: Movimiento de plataforma
             movePlatformWithHand() {
                 const gameX = this.gestureState.palmBase.x;
                 this.platform.x = gameX - this.platform.width / 2;
@@ -704,7 +725,7 @@
                 
                 activeMenus.forEach(menu => {
                     const style = window.getComputedStyle(menu);
-                    if (style.display !== 'none') {
+                    if (!menu.classList.contains('hidden')) {
                         const buttons = menu.querySelectorAll('.menu-button, .level-option');
                         
                         buttons.forEach(button => {
