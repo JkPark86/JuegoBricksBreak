@@ -333,7 +333,7 @@
                     radius: 25,
                     speedX: 8,
                     speedY: -8,
-                    active: false // IMPORTANTE: false como en el original
+                    active: false
                 };
                 
                 this.bricks = [];
@@ -345,7 +345,11 @@
                 this.fistStartTime = 0;
                 this.completedLevels = [];
                 
-                // GESTURE STATE ORIGINAL - sin vGestureActive
+                // NUEVO: Para el click prolongado
+                this.clickStartTime = 0;
+                this.isClicking = false;
+                this.currentHoverButton = null;
+                
                 this.gestureState = {
                     indexTip: { x: 0, y: 0 },
                     middleTip: { x: 0, y: 0 },
@@ -510,7 +514,6 @@
                     y: middleTip.y * canvasElement.height
                 };
                 
-                // DETECCIÓN DE GESTOS ORIGINAL
                 this.gestureState.fingersUp = this.countFingersUp(landmarks);
                 this.gestureState.fist = this.isFist(landmarks);
                 this.gestureState.vGesture = this.isVGesture(landmarks);
@@ -522,34 +525,12 @@
                 
                 const now = Date.now();
                 
-                // CLICK ORIGINAL - funciona en todos los botones
-                if (clickDistance < 40 && !this.gestureState.clickActive && 
-                    (now - this.gestureState.lastClickTime) > 500) {
-                    this.gestureState.clickActive = true;
-                    this.gestureState.lastClickTime = now;
-                    this.handleGestureClick();
-                } else if (clickDistance >= 40) {
-                    this.gestureState.clickActive = false;
-                }
-                
-                document.getElementById('fingersCount').textContent = this.gestureState.fingersUp;
-                
-                let estado = '🖐️ MOVIMIENTO - Plataforma';
-                if (this.gestureState.fist) {
-                    estado = '✊ PUÑO - Pausa';
-                } else if (clickDistance < 40) {
-                    estado = '👆 CLIC - Botones';
-                } else if (this.gestureState.vGesture) {
-                    estado = '✌️ V - Seleccionar Nivel';
-                }
-                document.getElementById('gestureState').textContent = estado;
-                
-                // MOVIMIENTO ORIGINAL - solo cuando se juega
+                // MOVIMIENTO DE PLATAFORMA (NO MODIFICAR)
                 if (this.gameState === 'playing' && !this.waitingForRestart) {
                     this.movePlatformWithHand();
                 }
                 
-                // DETECCIÓN DE PUÑO ORIGINAL - 500ms como en el original
+                // DETECCIÓN DE PUÑO PARA PAUSA (NO MODIFICAR)
                 if (this.gestureState.fist) {
                     if (this.fistStartTime === 0) {
                         this.fistStartTime = now;
@@ -561,12 +542,60 @@
                     this.fistStartTime = 0;
                 }
                 
-                // HOVER ORIGINAL
+                // GESTO V - MODIFICADO: Funciona desde cualquier estado
+                if (this.gestureState.vGesture) {
+                    if (!this.vGestureStartTime) {
+                        this.vGestureStartTime = now;
+                    } else if (now - this.vGestureStartTime > 800) {
+                        this.handleVGesture();
+                        this.vGestureStartTime = 0;
+                    }
+                } else {
+                    this.vGestureStartTime = 0;
+                }
+                
+                // NUEVO: CLICK PROLONGADO (2 segundos)
                 this.handleButtonHover();
                 
-                // GESTO V ORIGINAL - solo en menú de niveles
-                if (this.gameState === 'levels' && this.gestureState.vGesture) {
-                    this.handleLevelSelection();
+                if (clickDistance < 40) {
+                    if (!this.isClicking) {
+                        this.isClicking = true;
+                        this.clickStartTime = now;
+                        this.currentHoverButton = this.gestureState.hoverButton;
+                    } else if (this.isClicking && this.currentHoverButton === this.gestureState.hoverButton) {
+                        const clickDuration = now - this.clickStartTime;
+                        if (clickDuration > 2000) { // 2 segundos
+                            this.handleGestureClick();
+                            this.isClicking = false;
+                            this.clickStartTime = 0;
+                        }
+                    }
+                } else {
+                    this.isClicking = false;
+                    this.clickStartTime = 0;
+                    this.currentHoverButton = null;
+                }
+                
+                // Actualizar UI
+                document.getElementById('fingersCount').textContent = this.gestureState.fingersUp;
+                
+                let estado = '🖐️ MOVIMIENTO - Plataforma';
+                if (this.gestureState.fist) {
+                    estado = '✊ PUÑO - Pausa';
+                } else if (clickDistance < 40) {
+                    const clickDuration = this.isClicking ? (now - this.clickStartTime) : 0;
+                    const progress = Math.min(clickDuration / 2000, 1);
+                    estado = `👆 CLIC - ${Math.round(progress * 100)}%`;
+                } else if (this.gestureState.vGesture) {
+                    estado = '✌️ V - Seleccionar Nivel';
+                }
+                document.getElementById('gestureState').textContent = estado;
+            }
+            
+            // NUEVO: Manejo del gesto V desde cualquier estado
+            handleVGesture() {
+                if (this.gameState === 'playing' || this.gameState === 'paused' || this.gameState === 'menu') {
+                    this.showLevelsMenu();
                 }
             }
             
@@ -625,7 +654,6 @@
                     }
                 }
                 
-                // PULGAR ORIGINAL
                 if (landmarks[4].x < landmarks[3].x) count++;
                 
                 return count;
@@ -645,6 +673,7 @@
                 return bentFingers >= 3;
             }
             
+            // NO MODIFICAR: Movimiento de plataforma
             movePlatformWithHand() {
                 const gameX = this.gestureState.palmBase.x;
                 this.platform.x = gameX - this.platform.width / 2;
