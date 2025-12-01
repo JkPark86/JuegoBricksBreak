@@ -203,21 +203,6 @@
         .hidden {
             display: none !important;
         }
-
-        .camera-loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            padding: 30px;
-            border-radius: 15px;
-            border: 3px solid #00ff00;
-            color: #00ff00;
-            font-size: 20px;
-            z-index: 7;
-            text-align: center;
-        }
     </style>
 </head>
 <body>
@@ -230,10 +215,6 @@
         <canvas id="gameCanvas"></canvas>
         
         <div class="game-ui">
-            <div id="cameraLoading" class="camera-loading">
-                Inicializando cámara... Por favor permite el acceso a la cámara.
-            </div>
-            
             <div class="stats">
                 <div>Vidas: <span id="livesCount">3</span></div>
                 <div>Puntaje: <span id="scoreCount">0</span></div>
@@ -379,7 +360,6 @@
                 
                 this.hands = null;
                 this.camera = null;
-                this.cameraStarted = false;
                 
                 this.levelSpeeds = {
                     1: { x: 8, y: -8 },
@@ -403,9 +383,9 @@
             }
             
             async init() {
+                await this.setupMediaPipe();
                 this.createBricks();
                 this.setupEventListeners();
-                await this.setupMediaPipe();
                 this.gameLoop();
             }
 
@@ -415,20 +395,15 @@
                         this.handleButtonClick(e.target);
                     });
                 });
-
-                // Manejar redimensionamiento
-                window.addEventListener('resize', () => {
-                    this.canvas.width = window.innerWidth;
-                    this.canvas.height = window.innerHeight;
-                    canvasElement.width = window.innerWidth;
-                    canvasElement.height = window.innerHeight;
-                });
             }
             
             async setupMediaPipe() {
                 try {
-                    console.log('Inicializando MediaPipe Hands...');
-                    
+                    if (typeof Hands === 'undefined' || typeof Camera === 'undefined') {
+                        console.error('MediaPipe Hands o Camera no están definidos. Asegúrate de incluir los scripts.');
+                        return;
+                    }
+
                     this.hands = new Hands({
                         locateFile: (file) => {
                             return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
@@ -436,50 +411,30 @@
                     });
                     
                     this.hands.setOptions({
-                        maxNumHands: 1,
+                        maxNumHands: 2,
                         modelComplexity: 1,
-                        minDetectionConfidence: 0.7,
+                        minDetectionConfidence: 0.5,
                         minTrackingConfidence: 0.5
                     });
                     
                     this.hands.onResults(this.onHandResults.bind(this));
-
-                    console.log('MediaPipe Hands inicializado, iniciando cámara...');
                     
-                    // Inicializar cámara de forma más robusta
                     this.camera = new Camera(videoElement, {
                         onFrame: async () => {
-                            if (this.hands && this.cameraStarted) {
-                                try {
-                                    await this.hands.send({ image: videoElement });
-                                } catch (error) {
-                                    console.warn('Error enviando frame a Hands:', error);
-                                }
-                            }
+                            await this.hands.send({ image: videoElement });
                         },
-                        width: 640,
-                        height: 480,
-                        facingMode: 'user'
+                        width: window.innerWidth,
+                        height: window.innerHeight
                     });
-
-                    // Esperar a que la cámara esté lista
-                    await this.camera.start();
-                    this.cameraStarted = true;
                     
-                    console.log('Cámara iniciada correctamente');
-                    document.getElementById('cameraLoading').style.display = 'none';
+                    await this.camera.start();
                     
                 } catch (error) {
-                    console.error('Error inicializando MediaPipe:', error);
-                    document.getElementById('cameraLoading').innerHTML = 
-                        'Error al acceder a la cámara. Asegúrate de permitir el acceso.<br>' +
-                        'Recarga la página e intenta de nuevo.';
+                    console.error('Error MediaPipe:', error);
                 }
             }
             
             onHandResults(results) {
-                if (!this.cameraStarted) return;
-                
                 canvasCtx.save();
                 canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
                 
@@ -487,7 +442,7 @@
                     canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
                 }
                 
-                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                if (results.multiHandLandmarks) {
                     for (const landmarks of results.multiHandLandmarks) {
                         this.drawHandLandmarks(landmarks);
                         this.processHandLandmarks(landmarks);
@@ -498,12 +453,41 @@
             }
             
             drawHandLandmarks(landmarks) {
-                // Dibujar conexiones
-                drawingUtils.drawConnectors(canvasCtx, landmarks, drawingUtils.HAND_CONNECTIONS, 
-                    { color: '#00FF00', lineWidth: 2 });
-                // Dibujar puntos
-                drawingUtils.drawLandmarks(canvasCtx, landmarks, 
-                    { color: '#FF0000', lineWidth: 1, radius: 3 });
+                const HAND_CONNECTIONS = [
+                    [0,1],[1,2],[2,3],[3,4],
+                    [0,5],[5,6],[6,7],[7,8],
+                    [0,9],[9,10],[10,11],[11,12],
+                    [0,13],[13,14],[14,15],[15,16],
+                    [0,17],[17,18],[18,19],[19,20],
+                    [5,9],[9,13],[13,17]
+                ];
+                
+                canvasCtx.strokeStyle = '#00ff00';
+                canvasCtx.lineWidth = 4;
+                for (const connection of HAND_CONNECTIONS) {
+                    const [start, end] = connection;
+                    canvasCtx.beginPath();
+                    canvasCtx.moveTo(
+                        landmarks[start].x * canvasElement.width,
+                        landmarks[start].y * canvasElement.height
+                    );
+                    canvasCtx.lineTo(
+                        landmarks[end].x * canvasElement.width,
+                        landmarks[end].y * canvasElement.height
+                    );
+                    canvasCtx.stroke();
+                }
+                
+                canvasCtx.fillStyle = '#ff0000';
+                for (const landmark of landmarks) {
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(
+                        landmark.x * canvasElement.width,
+                        landmark.y * canvasElement.height,
+                        6, 0, 2 * Math.PI
+                    );
+                    canvasCtx.fill();
+                }
             }
             
             processHandLandmarks(landmarks) {
@@ -538,34 +522,33 @@
                 const now = Date.now();
                 
                 // GESTO DE CLICK
-                if (clickDistance < 50 && !this.gestureState.clickActive && 
+                if (clickDistance < 40 && !this.gestureState.clickActive && 
                     (now - this.gestureState.lastClickTime) > 500) {
                     this.gestureState.clickActive = true;
                     this.gestureState.lastClickTime = now;
                     this.handleGestureClick();
-                } else if (clickDistance >= 50) {
+                } else if (clickDistance >= 40) {
                     this.gestureState.clickActive = false;
                 }
                 
-                // Actualizar UI de gestos
                 document.getElementById('fingersCount').textContent = this.gestureState.fingersUp;
                 
                 let estado = '🖐️ MOVIMIENTO - Plataforma';
                 if (this.gestureState.fist) {
                     estado = '✊ PUÑO - Pausa';
-                } else if (clickDistance < 50) {
+                } else if (clickDistance < 40) {
                     estado = '👆 CLIC - Botones';
                 } else if (this.gestureState.vGesture) {
                     estado = '✌️ V - Seleccionar Nivel';
                 }
                 document.getElementById('gestureState').textContent = estado;
                 
-                // MOVIMIENTO DE PLATAFORMA
+                // Solo mover plataforma cuando se está jugando
                 if (this.gameState === 'playing' && !this.waitingForRestart) {
                     this.movePlatformWithHand();
                 }
                 
-                // DETECCIÓN DE PUÑO PARA PAUSA
+                // Detección de puño para pausa
                 if (this.gestureState.fist) {
                     if (this.fistStartTime === 0) {
                         this.fistStartTime = now;
@@ -577,10 +560,9 @@
                     this.fistStartTime = 0;
                 }
                 
-                // HOVER EN BOTONES
                 this.handleButtonHover();
                 
-                // GESTO V
+                // GESTO V MEJORADO
                 if (this.gestureState.vGesture && !this.gestureState.vGestureActive) {
                     this.gestureState.vGestureActive = true;
                     setTimeout(() => {
@@ -591,7 +573,7 @@
                     }, 800);
                 }
                 
-                // SELECCIÓN DE NIVELES
+                // Manejo de selección de niveles cuando estamos en el menú de niveles
                 if (this.gameState === 'levels') {
                     this.handleLevelSelection();
                 }
