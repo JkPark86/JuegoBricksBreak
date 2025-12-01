@@ -333,7 +333,7 @@
                     radius: 25,
                     speedX: 8,
                     speedY: -8,
-                    active: true
+                    active: false // IMPORTANTE: false como en el original
                 };
                 
                 this.bricks = [];
@@ -345,6 +345,7 @@
                 this.fistStartTime = 0;
                 this.completedLevels = [];
                 
+                // GESTURE STATE ORIGINAL - sin vGestureActive
                 this.gestureState = {
                     indexTip: { x: 0, y: 0 },
                     middleTip: { x: 0, y: 0 },
@@ -354,8 +355,7 @@
                     clickActive: false,
                     lastClickTime: 0,
                     hoverButton: null,
-                    vGesture: false,
-                    vGestureActive: false
+                    vGesture: false
                 };
                 
                 this.hands = null;
@@ -510,6 +510,7 @@
                     y: middleTip.y * canvasElement.height
                 };
                 
+                // DETECCIÓN DE GESTOS ORIGINAL
                 this.gestureState.fingersUp = this.countFingersUp(landmarks);
                 this.gestureState.fist = this.isFist(landmarks);
                 this.gestureState.vGesture = this.isVGesture(landmarks);
@@ -521,7 +522,7 @@
                 
                 const now = Date.now();
                 
-                // GESTO DE CLICK
+                // CLICK ORIGINAL - funciona en todos los botones
                 if (clickDistance < 40 && !this.gestureState.clickActive && 
                     (now - this.gestureState.lastClickTime) > 500) {
                     this.gestureState.clickActive = true;
@@ -543,16 +544,16 @@
                 }
                 document.getElementById('gestureState').textContent = estado;
                 
-                // Solo mover plataforma cuando se está jugando
+                // MOVIMIENTO ORIGINAL - solo cuando se juega
                 if (this.gameState === 'playing' && !this.waitingForRestart) {
                     this.movePlatformWithHand();
                 }
                 
-                // Detección de puño para pausa
+                // DETECCIÓN DE PUÑO ORIGINAL - 500ms como en el original
                 if (this.gestureState.fist) {
                     if (this.fistStartTime === 0) {
                         this.fistStartTime = now;
-                    } else if (this.gameState === 'playing' && !this.waitingForRestart && (now - this.fistStartTime) > 1000) {
+                    } else if (this.gameState === 'playing' && !this.waitingForRestart && (now - this.fistStartTime) > 500) {
                         this.pauseGame();
                         this.fistStartTime = 0;
                     }
@@ -560,21 +561,11 @@
                     this.fistStartTime = 0;
                 }
                 
+                // HOVER ORIGINAL
                 this.handleButtonHover();
                 
-                // GESTO V MEJORADO
-                if (this.gestureState.vGesture && !this.gestureState.vGestureActive) {
-                    this.gestureState.vGestureActive = true;
-                    setTimeout(() => {
-                        if (this.gestureState.vGesture) {
-                            this.handleVGesture();
-                        }
-                        this.gestureState.vGestureActive = false;
-                    }, 800);
-                }
-                
-                // Manejo de selección de niveles cuando estamos en el menú de niveles
-                if (this.gameState === 'levels') {
+                // GESTO V ORIGINAL - solo en menú de niveles
+                if (this.gameState === 'levels' && this.gestureState.vGesture) {
                     this.handleLevelSelection();
                 }
             }
@@ -597,13 +588,6 @@
                 return indexUp && middleUp && ringDown && pinkyDown;
             }
             
-            handleVGesture() {
-                console.log('Gesto V detectado');
-                if (this.gameState === 'playing' || this.gameState === 'paused' || this.gameState === 'menu') {
-                    this.showLevelsMenu();
-                }
-            }
-            
             handleLevelSelection() {
                 const levelOptions = document.querySelectorAll('.level-option');
                 let selectedLevel = null;
@@ -622,7 +606,6 @@
                 });
                 
                 if (selectedLevel && this.gestureState.vGesture) {
-                    console.log('Seleccionando nivel:', selectedLevel);
                     setTimeout(() => {
                         if (this.gestureState.vGesture) {
                             this.startGame(selectedLevel);
@@ -642,12 +625,8 @@
                     }
                 }
                 
-                // Pulgar
-                const thumbTip = landmarks[4];
-                const thumbIp = landmarks[3];
-                if (thumbTip.x < thumbIp.x) {
-                    count++;
-                }
+                // PULGAR ORIGINAL
+                if (landmarks[4].x < landmarks[3].x) count++;
                 
                 return count;
             }
@@ -667,8 +646,6 @@
             }
             
             movePlatformWithHand() {
-                if (!this.gestureState.palmBase.x) return;
-                
                 const gameX = this.gestureState.palmBase.x;
                 this.platform.x = gameX - this.platform.width / 2;
                 
@@ -679,39 +656,38 @@
             }
             
             handleButtonHover() {
-                const activeMenus = document.querySelectorAll('.menu:not(.hidden)');
+                const activeMenus = document.querySelectorAll('.menu');
                 let hoverButton = null;
                 
                 activeMenus.forEach(menu => {
-                    const buttons = menu.querySelectorAll('.menu-button, .level-option');
-                    
-                    buttons.forEach(button => {
-                        const rect = button.getBoundingClientRect();
-                        button.classList.remove('selected');
+                    const style = window.getComputedStyle(menu);
+                    if (style.display !== 'none') {
+                        const buttons = menu.querySelectorAll('.menu-button, .level-option');
                         
-                        if (this.gestureState.indexTip.x >= rect.left && 
-                            this.gestureState.indexTip.x <= rect.right &&
-                            this.gestureState.indexTip.y >= rect.top && 
-                            this.gestureState.indexTip.y <= rect.bottom) {
-                            hoverButton = button;
-                            button.classList.add('selected');
-                        }
-                    });
+                        buttons.forEach(button => {
+                            const rect = button.getBoundingClientRect();
+                            button.classList.remove('selected');
+                            
+                            if (this.gestureState.indexTip.x >= rect.left && 
+                                this.gestureState.indexTip.x <= rect.right &&
+                                this.gestureState.indexTip.y >= rect.top && 
+                                this.gestureState.indexTip.y <= rect.bottom) {
+                                hoverButton = button;
+                                button.classList.add('selected');
+                            }
+                        });
+                    }
                 });
                 
                 this.gestureState.hoverButton = hoverButton;
             }
             
             handleGestureClick() {
-                if (this.gestureState.hoverButton) {
-                    console.log('Click gestual en:', this.gestureState.hoverButton.dataset.action || this.gestureState.hoverButton.dataset.level);
-                    
-                    const originalBackground = this.gestureState.hoverButton.style.background;
+                if (this.gestureState.hoverButton) { 
                     this.gestureState.hoverButton.style.background = '#ffff00';
-                    
                     setTimeout(() => {
                         if (this.gestureState.hoverButton) {
-                            this.gestureState.hoverButton.style.background = originalBackground;
+                            this.gestureState.hoverButton.style.background = '';
                         }
                     }, 200);
                     
@@ -764,12 +740,10 @@
                     this.ball.y = this.canvas.height - 180;
                     this.ball.speedX = this.levelSpeeds[this.level].x;
                     this.ball.speedY = this.levelSpeeds[this.level].y;
-                    this.ball.active = true;
                 }
             }
             
             startGame(level) {
-                console.log('Iniciando juego nivel:', level);
                 this.level = level;
                 this.lives = 3;
                 this.score = 0;
@@ -791,8 +765,6 @@
             
             handleButtonClick(button) {
                 const action = button.dataset.action || button.dataset.level;
-                
-                console.log('Botón clickeado:', action);
                 
                 switch(action) {
                     case 'start':
@@ -889,6 +861,7 @@
                         nextLevelButton.textContent = `CONTINUAR NIVEL ${this.level + 1}`;
                         nextLevelButton.style.display = 'block';
                     } else {
+                        nextLevelButton.textContent = '¡JUEGO COMPLETADO!';
                         nextLevelButton.style.display = 'none';
                     }
                     
