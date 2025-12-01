@@ -314,9 +314,10 @@
                     brick: new Image()
                 };
 
-                this.images.platform.src = 'public/tierra.png';
-                this.images.ball.src = 'public/esfera.png';
-                this.images.brick.src = 'public/ladrillo.png';
+                // Usar rutas relativas correctas
+                this.images.platform.src = 'tierra.png';
+                this.images.ball.src = 'esfera.png';
+                this.images.brick.src = 'ladrillo.png';
 
                 this.setupFallbackImages();
 
@@ -333,14 +334,14 @@
                     radius: 25,
                     speedX: 8,
                     speedY: -8,
-                    active: false
+                    active: true  // IMPORTANTE: La pelota debe estar activa desde el inicio
                 };
                 
                 this.bricks = [];
                 this.lives = 3;
                 this.score = 0;
                 this.level = 1;
-                this.gameState = 'menu';
+                this.gameState = 'menu'; // Estado inicial en menú
                 this.waitingForRestart = false;
                 this.fistStartTime = 0;
                 this.completedLevels = [];
@@ -414,9 +415,11 @@
             }
 
             setupEventListeners() {
-                // Solo el botón "COMENZAR" permite click de mouse
-                document.querySelector('.menu-button.allow-mouse').addEventListener('click', (e) => {
-                    this.handleButtonClick(e.target);
+                // Event listeners para todos los botones con mouse
+                document.querySelectorAll('.menu-button, .level-option').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        this.handleButtonClick(e.target);
+                    });
                 });
             }
             
@@ -465,7 +468,7 @@
                     canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
                 }
                 
-                if (results.multiHandLandmarks) {
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                     for (const landmarks of results.multiHandLandmarks) {
                         this.drawHandLandmarks(landmarks);
                         this.processHandLandmarks(landmarks);
@@ -518,6 +521,7 @@
                 const indexTip = landmarks[8];
                 const middleTip = landmarks[12];
 
+                // Convertir coordenadas normalizadas a coordenadas de pantalla
                 this.gestureState.palmBase = {
                     x: (1 - wrist.x) * canvasElement.width,
                     y: wrist.y * canvasElement.height
@@ -544,7 +548,7 @@
                 
                 const now = Date.now();
                 
-                // GESTO DE CLICK MEJORADO - Funciona en TODOS los botones excepto menú inicial
+                // GESTO DE CLICK - Funciona en TODOS los botones
                 if (clickDistance < 40 && !this.gestureState.clickActive && 
                     (now - this.gestureState.lastClickTime) > 500) {
                     this.gestureState.clickActive = true;
@@ -554,6 +558,7 @@
                     this.gestureState.clickActive = false;
                 }
                 
+                // Actualizar UI de gestos
                 document.getElementById('fingersCount').textContent = this.gestureState.fingersUp;
                 
                 let estado = '🖐️ MOVIMIENTO - Plataforma';
@@ -571,7 +576,7 @@
                     this.movePlatformWithHand();
                 }
                 
-                // Detección de puño para pausa - MEJORADA
+                // Detección de puño para pausa
                 if (this.gestureState.fist) {
                     if (this.fistStartTime === 0) {
                         this.fistStartTime = now;
@@ -585,7 +590,7 @@
                 
                 this.handleButtonHover();
                 
-                // GESTO V MEJORADO - Funciona desde cualquier estado del juego
+                // GESTO V - Funciona desde cualquier estado del juego
                 if (this.gestureState.vGesture && !this.gestureState.vGestureActive) {
                     this.gestureState.vGestureActive = true;
                     setTimeout(() => {
@@ -621,6 +626,7 @@
             }
             
             handleVGesture() {
+                console.log('Gesto V detectado');
                 // Gesto V muestra el menú de niveles desde cualquier estado
                 if (this.gameState === 'playing' || this.gameState === 'paused' || this.gameState === 'menu') {
                     this.showLevelsMenu();
@@ -645,6 +651,7 @@
                 });
                 
                 if (selectedLevel && this.gestureState.vGesture) {
+                    console.log('Seleccionando nivel:', selectedLevel);
                     setTimeout(() => {
                         if (this.gestureState.vGesture) {
                             this.startGame(selectedLevel);
@@ -664,7 +671,12 @@
                     }
                 }
                 
-                if (landmarks[4].x < landmarks[3].x) count++;
+                // Pulgar - lógica diferente
+                const thumbTip = landmarks[4];
+                const thumbIp = landmarks[3];
+                if (thumbTip.x < thumbIp.x) {
+                    count++;
+                }
                 
                 return count;
             }
@@ -684,9 +696,12 @@
             }
             
             movePlatformWithHand() {
+                if (!this.gestureState.palmBase.x) return;
+                
                 const gameX = this.gestureState.palmBase.x;
                 this.platform.x = gameX - this.platform.width / 2;
                 
+                // Limitar la plataforma dentro de la pantalla
                 if (this.platform.x < 0) this.platform.x = 0;
                 if (this.platform.x + this.platform.width > this.canvas.width) {
                     this.platform.x = this.canvas.width - this.platform.width;
@@ -718,8 +733,10 @@
             }
             
             handleGestureClick() {
-                if (this.gestureState.hoverButton) { 
-                    // Efecto visual mejorado
+                if (this.gestureState.hoverButton) {
+                    console.log('Click en botón:', this.gestureState.hoverButton.dataset.action || this.gestureState.hoverButton.dataset.level);
+                    
+                    // Efecto visual
                     const originalBackground = this.gestureState.hoverButton.style.background;
                     this.gestureState.hoverButton.style.background = '#ffff00';
                     
@@ -774,18 +791,21 @@
                     message.style.display = 'none';
                     this.waitingForRestart = false;
                     
+                    // Resetear pelota
                     this.ball.x = this.canvas.width / 2;
                     this.ball.y = this.canvas.height - 180;
                     this.ball.speedX = this.levelSpeeds[this.level].x;
                     this.ball.speedY = this.levelSpeeds[this.level].y;
+                    this.ball.active = true;
                 }
             }
             
             startGame(level) {
+                console.log('Iniciando juego nivel:', level);
                 this.level = level;
                 this.lives = 3;
                 this.score = 0;
-                this.gameState = 'playing';
+                this.gameState = 'playing'; // IMPORTANTE: Cambiar estado a playing
                 this.waitingForRestart = false;
                 
                 const speed = this.levelSpeeds[level];
@@ -901,7 +921,6 @@
                         nextLevelButton.textContent = `CONTINUAR NIVEL ${this.level + 1}`;
                         nextLevelButton.style.display = 'block';
                     } else {
-                        nextLevelButton.textContent = '¡JUEGO COMPLETADO!';
                         nextLevelButton.style.display = 'none';
                     }
                     
@@ -943,9 +962,11 @@
             update() {
                 if (this.gameState !== 'playing' || this.waitingForRestart) return;
                 
+                // Mover pelota
                 this.ball.x += this.ball.speedX;
                 this.ball.y += this.ball.speedY;
                 
+                // Rebotes en paredes
                 if (this.ball.x - this.ball.radius <= 0 || 
                     this.ball.x + this.ball.radius >= this.canvas.width) {
                     this.ball.speedX = -this.ball.speedX;
@@ -955,6 +976,7 @@
                     this.ball.speedY = -this.ball.speedY;
                 }
                 
+                // Pelota cae
                 if (this.ball.y + this.ball.radius >= this.canvas.height) {
                     this.lives--;
                     this.updateUI();
@@ -966,8 +988,10 @@
                         this.waitingForRestart = true;
                         this.showLifeLostMessage();
                     }
+                    return;
                 }
                 
+                // Colisión con plataforma
                 if (this.ball.y + this.ball.radius >= this.platform.y &&
                     this.ball.y - this.ball.radius <= this.platform.y + this.platform.height &&
                     this.ball.x >= this.platform.x &&
@@ -975,9 +999,10 @@
                     
                     this.ball.speedY = -Math.abs(this.ball.speedY);
                     const hitPos = (this.ball.x - this.platform.x) / this.platform.width;
-                    this.ball.speedX = 15 * (hitPos - 0.5);
+                    this.ball.speedX = 12 * (hitPos - 0.5);
                 }
                 
+                // Colisión con bloques
                 for (let brick of this.bricks) {
                     if (brick.active && this.checkCollision(brick)) {
                         brick.active = false;
@@ -987,6 +1012,7 @@
                     }
                 }
                 
+                // Verificar si ganó el nivel
                 const activeBricks = this.bricks.filter(brick => brick.active);
                 if (activeBricks.length === 0) {
                     this.gameState = 'win';
@@ -1004,17 +1030,39 @@
             draw() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 
+                // Dibujar plataforma
                 if (this.images.platform.complete) {
                     this.ctx.drawImage(this.images.platform, this.platform.x, this.platform.y, this.platform.width, this.platform.height);
+                } else {
+                    // Fallback
+                    this.ctx.fillStyle = '#00ff00';
+                    this.ctx.fillRect(this.platform.x, this.platform.y, this.platform.width, this.platform.height);
                 }
                 
+                // Dibujar pelota
                 if (this.images.ball.complete) {
                     this.ctx.drawImage(this.images.ball, this.ball.x - this.ball.radius, this.ball.y - this.ball.radius, this.ball.radius * 2, this.ball.radius * 2);
+                } else {
+                    // Fallback
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.beginPath();
+                    this.ctx.arc(this.ball.x, this.ball.y, this.ball.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
                 }
                 
+                // Dibujar bloques
                 this.bricks.forEach(brick => {
-                    if (brick.active && this.images.brick.complete) {
-                        this.ctx.drawImage(this.images.brick, brick.x, brick.y, brick.width, brick.height);
+                    if (brick.active) {
+                        if (this.images.brick.complete) {
+                            this.ctx.drawImage(this.images.brick, brick.x, brick.y, brick.width, brick.height);
+                        } else {
+                            // Fallback
+                            this.ctx.fillStyle = '#ff0000';
+                            this.ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+                            this.ctx.strokeStyle = '#aa0000';
+                            this.ctx.lineWidth = 3;
+                            this.ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
+                        }
                     }
                 });
             }
