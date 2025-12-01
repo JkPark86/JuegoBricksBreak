@@ -345,7 +345,7 @@
                 this.fistStartTime = 0;
                 this.completedLevels = [];
                 
-                // NUEVO: Para el click prolongado
+                // NUEVO: Variables para las nuevas funcionalidades
                 this.clickStartTime = 0;
                 this.isClicking = false;
                 this.currentHoverButton = null;
@@ -376,38 +376,14 @@
             }
 
             setupFallbackImages() {
-                this.createFallbackImage('platform', 240, 35, '#00ff00');
-                this.createFallbackImage('ball', 50, 50, '#ffffff');
-                this.createFallbackImage('brick', 100, 40, '#ff0000');
-            }
-
-            createFallbackImage(name, width, height, color) {
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                
-                ctx.fillStyle = color;
-                
-                if (name === 'ball') {
-                    ctx.beginPath();
-                    ctx.arc(width/2, height/2, width/2, 0, Math.PI * 2);
-                    ctx.fill();
-                } else {
-                    ctx.fillRect(0, 0, width, height);
-                    
-                    if (name === 'brick') {
-                        ctx.strokeStyle = '#aa0000';
-                        ctx.lineWidth = 3;
-                        ctx.strokeRect(0, 0, width, height);
-                    }
-                }
-                
-                const img = new Image();
-                img.src = canvas.toDataURL();
-                
-                this.images[name].onerror = () => {
-                    this.images[name] = img;
+                this.images.platform.onerror = () => {
+                    this.images.platform.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="35"><rect width="240" height="35" fill="%2300ff00"/></svg>';
+                };
+                this.images.ball.onerror = () => {
+                    this.images.ball.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><circle cx="25" cy="25" r="25" fill="%23ffffff"/></svg>';
+                };
+                this.images.brick.onerror = () => {
+                    this.images.brick.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="45"><rect width="120" height="45" fill="%23ff0000" stroke="%23aa0000" stroke-width="3"/></svg>';
                 };
             }
             
@@ -416,6 +392,14 @@
                 this.createBricks();
                 this.setupEventListeners();
                 this.gameLoop();
+            }
+
+            setupEventListeners() {
+                document.querySelectorAll('.menu-button, .level-option').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        this.handleButtonClick(e.target);
+                    });
+                });
             }
             
             async setupMediaPipe() {
@@ -591,14 +575,12 @@
                 this.handleButtonHover();
                 
                 // NUEVO: Gesto V desde cualquier estado
-                if (this.gestureState.vGesture) {
-                    if (!this.vGestureStartTime) {
-                        this.vGestureStartTime = now;
-                    } else if (now - this.vGestureStartTime > 800) {
-                        this.handleVGesture();
-                        this.vGestureStartTime = 0;
-                    }
-                } else {
+                if (this.gestureState.vGesture && !this.vGestureStartTime) {
+                    this.vGestureStartTime = now;
+                } else if (this.gestureState.vGesture && this.vGestureStartTime && (now - this.vGestureStartTime) > 800) {
+                    this.handleVGesture();
+                    this.vGestureStartTime = 0;
+                } else if (!this.gestureState.vGesture) {
                     this.vGestureStartTime = 0;
                 }
                 
@@ -720,27 +702,24 @@
             }
             
             handleButtonHover() {
-                const activeMenus = document.querySelectorAll('.menu');
+                const activeMenus = document.querySelectorAll('.menu:not(.hidden)');
                 let hoverButton = null;
                 
                 activeMenus.forEach(menu => {
-                    const style = window.getComputedStyle(menu);
-                    if (!menu.classList.contains('hidden')) {
-                        const buttons = menu.querySelectorAll('.menu-button, .level-option');
+                    const buttons = menu.querySelectorAll('.menu-button, .level-option');
+                    
+                    buttons.forEach(button => {
+                        const rect = button.getBoundingClientRect();
+                        button.classList.remove('selected');
                         
-                        buttons.forEach(button => {
-                            const rect = button.getBoundingClientRect();
-                            button.classList.remove('selected');
-                            
-                            if (this.gestureState.indexTip.x >= rect.left && 
-                                this.gestureState.indexTip.x <= rect.right &&
-                                this.gestureState.indexTip.y >= rect.top && 
-                                this.gestureState.indexTip.y <= rect.bottom) {
-                                hoverButton = button;
-                                button.classList.add('selected');
-                            }
-                        });
-                    }
+                        if (this.gestureState.indexTip.x >= rect.left && 
+                            this.gestureState.indexTip.x <= rect.right &&
+                            this.gestureState.indexTip.y >= rect.top && 
+                            this.gestureState.indexTip.y <= rect.bottom) {
+                            hoverButton = button;
+                            button.classList.add('selected');
+                        }
+                    });
                 });
                 
                 this.gestureState.hoverButton = hoverButton;
@@ -925,7 +904,6 @@
                         nextLevelButton.textContent = `CONTINUAR NIVEL ${this.level + 1}`;
                         nextLevelButton.style.display = 'block';
                     } else {
-                        nextLevelButton.textContent = '¡JUEGO COMPLETADO!';
                         nextLevelButton.style.display = 'none';
                     }
                     
