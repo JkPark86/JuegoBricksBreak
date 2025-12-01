@@ -258,8 +258,7 @@
             <div id="pauseMenu" class="menu hidden">
                 <h2>PAUSA</h2>
                 <button class="menu-button" data-action="resume">CONTINUAR</button>
-                <button class="menu-button" data-action="menu">MENÚ</button>
-                <button class="menu-button" data-action="exit">SALIR</button>
+                <button class="menu-button" data-action="menu">MENÚ PRINCIPAL</button>
             </div>
             
             <div id="winMenu" class="menu hidden">
@@ -321,7 +320,6 @@
 
                 this.setupFallbackImages();
 
-                // ELEMENTOS MÁS GRANDES
                 this.platform = {
                     x: this.canvas.width / 2 - 120,
                     y: this.canvas.height - 120,
@@ -342,7 +340,7 @@
                 this.lives = 3;
                 this.score = 0;
                 this.level = 1;
-                this.gameState = 'menu'; // CORREGIDO: control de estado
+                this.gameState = 'menu';
                 this.waitingForRestart = false;
                 this.fistStartTime = 0;
                 this.completedLevels = [];
@@ -356,17 +354,17 @@
                     clickActive: false,
                     lastClickTime: 0,
                     hoverButton: null,
-                    vGesture: false
+                    vGesture: false,
+                    vGestureActive: false
                 };
                 
                 this.hands = null;
                 this.camera = null;
                 
-                // VELOCIDADES MÁS RÁPIDAS
                 this.levelSpeeds = {
-                    1: { x: 8, y: -8 },   // Más rápido
-                    2: { x: 12, y: -12 }, // Rápido
-                    3: { x: 16, y: -16 }  // Muy rápido
+                    1: { x: 8, y: -8 },
+                    2: { x: 12, y: -12 },
+                    3: { x: 16, y: -16 }
                 };
                 
                 this.init();
@@ -375,7 +373,7 @@
             setupFallbackImages() {
                 this.createFallbackImage('platform', 240, 35, '#00ff00');
                 this.createFallbackImage('ball', 50, 50, '#ffffff');
-                this.createFallbackImage('brick', 120, 45, '#ff0000'); // Más grande
+                this.createFallbackImage('brick', 120, 45, '#ff0000');
             }
 
             createFallbackImage(name, width, height, color) {
@@ -419,11 +417,6 @@
                 // Solo el botón "COMENZAR" permite click de mouse
                 document.querySelector('.menu-button.allow-mouse').addEventListener('click', (e) => {
                     this.handleButtonClick(e.target);
-                });
-
-                // Desactivar clicks de mouse en otros botones
-                document.querySelectorAll('.menu-button:not(.allow-mouse), .level-option').forEach(button => {
-                    button.style.pointerEvents = 'none';
                 });
             }
             
@@ -551,9 +544,9 @@
                 
                 const now = Date.now();
                 
-                // Gesto de CLICK (dos dedos juntos)
+                // GESTO DE CLICK MEJORADO - Funciona en TODOS los botones excepto menú inicial
                 if (clickDistance < 40 && !this.gestureState.clickActive && 
-                    (now - this.gestureState.lastClickTime) > 500) {
+                    (now - this.gestureState.lastClickTime) > 500 && this.gameState !== 'menu') {
                     this.gestureState.clickActive = true;
                     this.gestureState.lastClickTime = now;
                     this.handleGestureClick();
@@ -578,11 +571,11 @@
                     this.movePlatformWithHand();
                 }
                 
-                // Detección de puño para pausa
+                // Detección de puño para pausa - MEJORADA
                 if (this.gestureState.fist) {
                     if (this.fistStartTime === 0) {
                         this.fistStartTime = now;
-                    } else if (this.gameState === 'playing' && !this.waitingForRestart && (now - this.fistStartTime) > 500) {
+                    } else if (this.gameState === 'playing' && !this.waitingForRestart && (now - this.fistStartTime) > 1000) {
                         this.pauseGame();
                         this.fistStartTime = 0;
                     }
@@ -592,9 +585,15 @@
                 
                 this.handleButtonHover();
                 
-                // Gesto V para selección de niveles
-                if (this.gameState === 'levels' && this.gestureState.vGesture) {
-                    this.handleLevelSelection();
+                // GESTO V MEJORADO - Funciona desde cualquier estado del juego
+                if (this.gestureState.vGesture && !this.gestureState.vGestureActive) {
+                    this.gestureState.vGestureActive = true;
+                    setTimeout(() => {
+                        if (this.gestureState.vGesture) {
+                            this.handleVGesture();
+                        }
+                        this.gestureState.vGestureActive = false;
+                    }, 800);
                 }
             }
             
@@ -614,6 +613,13 @@
                 const pinkyDown = pinkyTip.y > pinkyPip.y;
                 
                 return indexUp && middleUp && ringDown && pinkyDown;
+            }
+            
+            handleVGesture() {
+                // Gesto V muestra el menú de niveles desde cualquier estado
+                if (this.gameState === 'playing' || this.gameState === 'paused' || this.gameState === 'menu') {
+                    this.showLevelsMenu();
+                }
             }
             
             handleLevelSelection() {
@@ -709,11 +715,14 @@
             }
             
             handleGestureClick() {
-                if (this.gestureState.hoverButton) { 
+                if (this.gestureState.hoverButton && this.gameState !== 'menu') { 
+                    // Efecto visual mejorado
+                    const originalBackground = this.gestureState.hoverButton.style.background;
                     this.gestureState.hoverButton.style.background = '#ffff00';
+                    
                     setTimeout(() => {
                         if (this.gestureState.hoverButton) {
-                            this.gestureState.hoverButton.style.background = '';
+                            this.gestureState.hoverButton.style.background = originalBackground;
                         }
                     }, 200);
                     
@@ -723,7 +732,7 @@
             
             createBricks() {
                 this.bricks = [];
-                const rows = 2; // SOLO 2 FILAS
+                const rows = 2;
                 const cols = 8;
                 const brickWidth = 120;
                 const brickHeight = 45;
@@ -773,7 +782,7 @@
                 this.level = level;
                 this.lives = 3;
                 this.score = 0;
-                this.gameState = 'playing'; // CORREGIDO: estado correcto
+                this.gameState = 'playing';
                 this.waitingForRestart = false;
                 
                 const speed = this.levelSpeeds[level];
@@ -791,6 +800,8 @@
             
             handleButtonClick(button) {
                 const action = button.dataset.action || button.dataset.level;
+                
+                console.log('Botón clickeado:', action);
                 
                 switch(action) {
                     case 'start':
@@ -839,26 +850,27 @@
             
             pauseGame() {
                 if (this.gameState === 'playing' && !this.waitingForRestart) {
-                    this.gameState = 'paused'; // CORREGIDO: estado pausa
+                    this.gameState = 'paused';
                     this.showPauseMenu();
                 }
             }
             
             resumeGame() {
                 if (this.gameState === 'paused') {
-                    this.gameState = 'playing'; // CORREGIDO: reanudar juego
+                    this.gameState = 'playing';
                     this.hideAllMenus();
+                    // CORREGIDO: Reiniciar el game loop
+                    this.gameLoop();
                 }
             }
             
             showMainMenu() {
-                this.gameState = 'menu'; // CORREGIDO: estado menú
+                this.gameState = 'menu';
                 this.hideAllMenus();
                 document.getElementById('mainMenu').classList.remove('hidden');
             }
             
             showLevelsMenu() {
-                this.gameState = 'levels'; // CORREGIDO: estado niveles
                 this.hideAllMenus();
                 document.getElementById('levelsMenu').classList.remove('hidden');
             }
@@ -927,7 +939,6 @@
             }
             
             update() {
-                // CORREGIDO: Solo actualizar cuando se está jugando
                 if (this.gameState !== 'playing' || this.waitingForRestart) return;
                 
                 this.ball.x += this.ball.speedX;
