@@ -314,10 +314,10 @@
                     brick: new Image()
                 };
 
-                // Usar rutas relativas correctas
-                this.images.platform.src = 'tierra.png';
-                this.images.ball.src = 'esfera.png';
-                this.images.brick.src = 'ladrillo.png';
+                // Mantener tus imágenes originales
+                this.images.platform.src = 'public/tierra.png';
+                this.images.ball.src = 'public/esfera.png';
+                this.images.brick.src = 'public/ladrillo.png';
 
                 this.setupFallbackImages();
 
@@ -334,14 +334,14 @@
                     radius: 25,
                     speedX: 8,
                     speedY: -8,
-                    active: true  // IMPORTANTE: La pelota debe estar activa desde el inicio
+                    active: true
                 };
                 
                 this.bricks = [];
                 this.lives = 3;
                 this.score = 0;
                 this.level = 1;
-                this.gameState = 'menu'; // Estado inicial en menú
+                this.gameState = 'menu';
                 this.waitingForRestart = false;
                 this.fistStartTime = 0;
                 this.completedLevels = [];
@@ -372,38 +372,15 @@
             }
 
             setupFallbackImages() {
-                this.createFallbackImage('platform', 240, 35, '#00ff00');
-                this.createFallbackImage('ball', 50, 50, '#ffffff');
-                this.createFallbackImage('brick', 120, 45, '#ff0000');
-            }
-
-            createFallbackImage(name, width, height, color) {
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                
-                ctx.fillStyle = color;
-                
-                if (name === 'ball') {
-                    ctx.beginPath();
-                    ctx.arc(width/2, height/2, width/2, 0, Math.PI * 2);
-                    ctx.fill();
-                } else {
-                    ctx.fillRect(0, 0, width, height);
-                    
-                    if (name === 'brick') {
-                        ctx.strokeStyle = '#aa0000';
-                        ctx.lineWidth = 3;
-                        ctx.strokeRect(0, 0, width, height);
-                    }
-                }
-                
-                const img = new Image();
-                img.src = canvas.toDataURL();
-                
-                this.images[name].onerror = () => {
-                    this.images[name] = img;
+                // Fallback simple sin cambiar el diseño
+                this.images.platform.onerror = () => {
+                    this.images.platform.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="35"><rect width="240" height="35" fill="%2300ff00"/></svg>';
+                };
+                this.images.ball.onerror = () => {
+                    this.images.ball.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><circle cx="25" cy="25" r="25" fill="%23ffffff"/></svg>';
+                };
+                this.images.brick.onerror = () => {
+                    this.images.brick.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="45"><rect width="120" height="45" fill="%23ff0000" stroke="%23aa0000" stroke-width="3"/></svg>';
                 };
             }
             
@@ -415,7 +392,6 @@
             }
 
             setupEventListeners() {
-                // Event listeners para todos los botones con mouse
                 document.querySelectorAll('.menu-button, .level-option').forEach(button => {
                     button.addEventListener('click', (e) => {
                         this.handleButtonClick(e.target);
@@ -425,11 +401,6 @@
             
             async setupMediaPipe() {
                 try {
-                    if (typeof Hands === 'undefined' || typeof Camera === 'undefined') {
-                        console.error('MediaPipe Hands o Camera no están definidos. Asegúrate de incluir los scripts.');
-                        return;
-                    }
-
                     this.hands = new Hands({
                         locateFile: (file) => {
                             return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
@@ -479,41 +450,10 @@
             }
             
             drawHandLandmarks(landmarks) {
-                const HAND_CONNECTIONS = [
-                    [0,1],[1,2],[2,3],[3,4],
-                    [0,5],[5,6],[6,7],[7,8],
-                    [0,9],[9,10],[10,11],[11,12],
-                    [0,13],[13,14],[14,15],[15,16],
-                    [0,17],[17,18],[18,19],[19,20],
-                    [5,9],[9,13],[13,17]
-                ];
-                
-                canvasCtx.strokeStyle = '#00ff00';
-                canvasCtx.lineWidth = 4;
-                for (const connection of HAND_CONNECTIONS) {
-                    const [start, end] = connection;
-                    canvasCtx.beginPath();
-                    canvasCtx.moveTo(
-                        landmarks[start].x * canvasElement.width,
-                        landmarks[start].y * canvasElement.height
-                    );
-                    canvasCtx.lineTo(
-                        landmarks[end].x * canvasElement.width,
-                        landmarks[end].y * canvasElement.height
-                    );
-                    canvasCtx.stroke();
-                }
-                
-                canvasCtx.fillStyle = '#ff0000';
-                for (const landmark of landmarks) {
-                    canvasCtx.beginPath();
-                    canvasCtx.arc(
-                        landmark.x * canvasElement.width,
-                        landmark.y * canvasElement.height,
-                        6, 0, 2 * Math.PI
-                    );
-                    canvasCtx.fill();
-                }
+                drawingUtils.drawConnectors(canvasCtx, landmarks, drawingUtils.HAND_CONNECTIONS, 
+                    { color: '#00FF00', lineWidth: 4 });
+                drawingUtils.drawLandmarks(canvasCtx, landmarks, 
+                    { color: '#FF0000', lineWidth: 2 });
             }
             
             processHandLandmarks(landmarks) {
@@ -521,7 +461,7 @@
                 const indexTip = landmarks[8];
                 const middleTip = landmarks[12];
 
-                // Convertir coordenadas normalizadas a coordenadas de pantalla
+                // Coordenadas corregidas para el juego
                 this.gestureState.palmBase = {
                     x: (1 - wrist.x) * canvasElement.width,
                     y: wrist.y * canvasElement.height
@@ -537,6 +477,7 @@
                     y: middleTip.y * canvasElement.height
                 };
                 
+                // Detección de gestos MEJORADA
                 this.gestureState.fingersUp = this.countFingersUp(landmarks);
                 this.gestureState.fist = this.isFist(landmarks);
                 this.gestureState.vGesture = this.isVGesture(landmarks);
@@ -571,12 +512,12 @@
                 }
                 document.getElementById('gestureState').textContent = estado;
                 
-                // Solo mover plataforma cuando se está jugando
+                // MOVIMIENTO DE PLATAFORMA - Solo cuando se juega
                 if (this.gameState === 'playing' && !this.waitingForRestart) {
                     this.movePlatformWithHand();
                 }
                 
-                // Detección de puño para pausa
+                // DETECCIÓN DE PUÑO PARA PAUSA
                 if (this.gestureState.fist) {
                     if (this.fistStartTime === 0) {
                         this.fistStartTime = now;
@@ -588,9 +529,10 @@
                     this.fistStartTime = 0;
                 }
                 
+                // HOVER EN BOTONES
                 this.handleButtonHover();
                 
-                // GESTO V - Funciona desde cualquier estado del juego
+                // GESTO V - MEJORADO
                 if (this.gestureState.vGesture && !this.gestureState.vGestureActive) {
                     this.gestureState.vGestureActive = true;
                     setTimeout(() => {
@@ -601,7 +543,7 @@
                     }, 800);
                 }
                 
-                // Manejo de selección de niveles cuando estamos en el menú de niveles
+                // SELECCIÓN DE NIVELES - Solo en menú de niveles
                 if (this.gameState === 'levels') {
                     this.handleLevelSelection();
                 }
@@ -626,8 +568,7 @@
             }
             
             handleVGesture() {
-                console.log('Gesto V detectado');
-                // Gesto V muestra el menú de niveles desde cualquier estado
+                console.log('Gesto V detectado - Mostrando menú de niveles');
                 if (this.gameState === 'playing' || this.gameState === 'paused' || this.gameState === 'menu') {
                     this.showLevelsMenu();
                 }
@@ -651,7 +592,7 @@
                 });
                 
                 if (selectedLevel && this.gestureState.vGesture) {
-                    console.log('Seleccionando nivel:', selectedLevel);
+                    console.log('Seleccionando nivel con gesto V:', selectedLevel);
                     setTimeout(() => {
                         if (this.gestureState.vGesture) {
                             this.startGame(selectedLevel);
@@ -671,7 +612,7 @@
                     }
                 }
                 
-                // Pulgar - lógica diferente
+                // Pulgar
                 const thumbTip = landmarks[4];
                 const thumbIp = landmarks[3];
                 if (thumbTip.x < thumbIp.x) {
@@ -701,7 +642,6 @@
                 const gameX = this.gestureState.palmBase.x;
                 this.platform.x = gameX - this.platform.width / 2;
                 
-                // Limitar la plataforma dentro de la pantalla
                 if (this.platform.x < 0) this.platform.x = 0;
                 if (this.platform.x + this.platform.width > this.canvas.width) {
                     this.platform.x = this.canvas.width - this.platform.width;
@@ -734,9 +674,8 @@
             
             handleGestureClick() {
                 if (this.gestureState.hoverButton) {
-                    console.log('Click en botón:', this.gestureState.hoverButton.dataset.action || this.gestureState.hoverButton.dataset.level);
+                    console.log('Click gestual en:', this.gestureState.hoverButton.dataset.action || this.gestureState.hoverButton.dataset.level);
                     
-                    // Efecto visual
                     const originalBackground = this.gestureState.hoverButton.style.background;
                     this.gestureState.hoverButton.style.background = '#ffff00';
                     
@@ -791,7 +730,6 @@
                     message.style.display = 'none';
                     this.waitingForRestart = false;
                     
-                    // Resetear pelota
                     this.ball.x = this.canvas.width / 2;
                     this.ball.y = this.canvas.height - 180;
                     this.ball.speedX = this.levelSpeeds[this.level].x;
@@ -805,7 +743,7 @@
                 this.level = level;
                 this.lives = 3;
                 this.score = 0;
-                this.gameState = 'playing'; // IMPORTANTE: Cambiar estado a playing
+                this.gameState = 'playing';
                 this.waitingForRestart = false;
                 
                 const speed = this.levelSpeeds[level];
@@ -962,11 +900,9 @@
             update() {
                 if (this.gameState !== 'playing' || this.waitingForRestart) return;
                 
-                // Mover pelota
                 this.ball.x += this.ball.speedX;
                 this.ball.y += this.ball.speedY;
                 
-                // Rebotes en paredes
                 if (this.ball.x - this.ball.radius <= 0 || 
                     this.ball.x + this.ball.radius >= this.canvas.width) {
                     this.ball.speedX = -this.ball.speedX;
@@ -976,7 +912,6 @@
                     this.ball.speedY = -this.ball.speedY;
                 }
                 
-                // Pelota cae
                 if (this.ball.y + this.ball.radius >= this.canvas.height) {
                     this.lives--;
                     this.updateUI();
@@ -988,10 +923,8 @@
                         this.waitingForRestart = true;
                         this.showLifeLostMessage();
                     }
-                    return;
                 }
                 
-                // Colisión con plataforma
                 if (this.ball.y + this.ball.radius >= this.platform.y &&
                     this.ball.y - this.ball.radius <= this.platform.y + this.platform.height &&
                     this.ball.x >= this.platform.x &&
@@ -999,10 +932,9 @@
                     
                     this.ball.speedY = -Math.abs(this.ball.speedY);
                     const hitPos = (this.ball.x - this.platform.x) / this.platform.width;
-                    this.ball.speedX = 12 * (hitPos - 0.5);
+                    this.ball.speedX = 15 * (hitPos - 0.5);
                 }
                 
-                // Colisión con bloques
                 for (let brick of this.bricks) {
                     if (brick.active && this.checkCollision(brick)) {
                         brick.active = false;
@@ -1012,7 +944,6 @@
                     }
                 }
                 
-                // Verificar si ganó el nivel
                 const activeBricks = this.bricks.filter(brick => brick.active);
                 if (activeBricks.length === 0) {
                     this.gameState = 'win';
@@ -1030,39 +961,18 @@
             draw() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 
-                // Dibujar plataforma
+                // Usar tus imágenes originales
                 if (this.images.platform.complete) {
                     this.ctx.drawImage(this.images.platform, this.platform.x, this.platform.y, this.platform.width, this.platform.height);
-                } else {
-                    // Fallback
-                    this.ctx.fillStyle = '#00ff00';
-                    this.ctx.fillRect(this.platform.x, this.platform.y, this.platform.width, this.platform.height);
                 }
                 
-                // Dibujar pelota
                 if (this.images.ball.complete) {
                     this.ctx.drawImage(this.images.ball, this.ball.x - this.ball.radius, this.ball.y - this.ball.radius, this.ball.radius * 2, this.ball.radius * 2);
-                } else {
-                    // Fallback
-                    this.ctx.fillStyle = '#ffffff';
-                    this.ctx.beginPath();
-                    this.ctx.arc(this.ball.x, this.ball.y, this.ball.radius, 0, Math.PI * 2);
-                    this.ctx.fill();
                 }
                 
-                // Dibujar bloques
                 this.bricks.forEach(brick => {
-                    if (brick.active) {
-                        if (this.images.brick.complete) {
-                            this.ctx.drawImage(this.images.brick, brick.x, brick.y, brick.width, brick.height);
-                        } else {
-                            // Fallback
-                            this.ctx.fillStyle = '#ff0000';
-                            this.ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
-                            this.ctx.strokeStyle = '#aa0000';
-                            this.ctx.lineWidth = 3;
-                            this.ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
-                        }
+                    if (brick.active && this.images.brick.complete) {
+                        this.ctx.drawImage(this.images.brick, brick.x, brick.y, brick.width, brick.height);
                     }
                 });
             }
