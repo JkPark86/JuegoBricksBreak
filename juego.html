@@ -19,7 +19,6 @@
             background: black;
             overflow: hidden;
             font-family: Arial, sans-serif;
-            color: #00ff00;
         }
         
         .game-container {
@@ -35,7 +34,6 @@
             width: 100%;
             height: 100%;
             z-index: 1;
-            opacity: 0.3;
         }
         
         #webcam {
@@ -82,11 +80,11 @@
             top: 20px;
             left: 20px;
             background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            border-radius: 10px;
-            border: 2px solid #00ff00;
+            padding: 20px;
+            border-radius: 15px;
+            border: 3px solid #00ff00;
             color: #00ff00;
-            font-size: 18px;
+            font-size: 24px;
             font-weight: bold;
         }
         
@@ -96,19 +94,19 @@
             left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.95);
-            padding: 30px;
-            border-radius: 15px;
-            border: 3px solid #00ff00;
+            padding: 50px;
+            border-radius: 20px;
+            border: 4px solid #00ff00;
             color: white;
             text-align: center;
-            min-width: 400px;
+            min-width: 500px;
             z-index: 4;
         }
         
         .menu h2 {
             color: #00ff00;
-            margin-bottom: 20px;
-            font-size: 28px;
+            margin-bottom: 30px;
+            font-size: 36px;
         }
         
         .menu-button {
@@ -117,46 +115,59 @@
             background: #00ff00;
             color: black;
             border: none;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            font-size: 18px;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 12px;
+            font-size: 24px;
             font-weight: bold;
             cursor: pointer;
             pointer-events: auto;
             transition: all 0.3s;
         }
         
-        .menu-button:hover {
+        .menu-button:hover, .menu-button.selected {
             background: #ffff00;
             transform: scale(1.05);
         }
-
+        
         .level-options {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
-            margin: 20px 0;
+            gap: 20px;
+            margin: 30px 0;
         }
-
+        
         .level-option {
             background: rgba(0, 255, 0, 0.2);
-            padding: 15px;
-            border-radius: 8px;
-            border: 2px solid #00ff00;
-            color: #00ff00;
+            padding: 25px;
+            border-radius: 15px;
+            border: 3px solid #00ff00;
             cursor: pointer;
             pointer-events: auto;
             transition: all 0.3s;
         }
-
-        .level-option.selected {
+        
+        .level-option:hover, .level-option.selected {
             background: rgba(0, 255, 0, 0.4);
             transform: scale(1.05);
         }
-
+        
         .level-option h3 {
-            margin-bottom: 5px;
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .level-option p {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        
+        .score-display {
+            font-size: 28px;
+            margin: 20px 0;
+            color: #00ff00;
+            font-weight: bold;
         }
         
         .gesture-info {
@@ -164,43 +175,33 @@
             bottom: 20px;
             right: 20px;
             background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            border-radius: 10px;
-            border: 2px solid #00ff00;
+            padding: 20px;
+            border-radius: 15px;
+            border: 3px solid #00ff00;
             color: #00ff00;
-            font-size: 16px;
+            font-size: 18px;
             z-index: 5;
+        }
+
+        .life-lost-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            border: 4px solid #ff0000;
+            color: #ff0000;
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 6;
+            display: none;
         }
 
         .hidden {
             display: none !important;
-        }
-
-        .debug-info {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ff0000;
-            color: #ff0000;
-            font-size: 12px;
-            z-index: 6;
-        }
-
-        .click-feedback {
-            position: absolute;
-            background: #ffff00;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 7;
-            animation: clickEffect 0.5s ease-out;
-        }
-
-        @keyframes clickEffect {
-            0% { transform: scale(0); opacity: 1; }
-            100% { transform: scale(2); opacity: 0; }
         }
     </style>
 </head>
@@ -220,199 +221,219 @@
                 <div>Nivel: <span id="levelCount">1</span></div>
             </div>
             
-            <div id="mainMenu" class="menu">
-                <h2>ROMPEBLOQUES</h2>
-                <button class="menu-button" data-action="start" data-level="1">COMENZAR JUEGO</button>
-                <button class="menu-button" data-action="levels">SELECCIONAR NIVEL</button>
-                <button class="menu-button" data-action="exit">VOLVER AL INICIO</button>
+            <div id="lifeLostMessage" class="life-lost-message">
+                <div id="lifeLostText">Te quedan 2 vidas</div>
+                <div id="lifeLostTimer" style="margin-top: 20px; font-size: 24px;">Continuando en 3 segundos...</div>
             </div>
-
+            
+            <div id="mainMenu" class="menu">
+                <h2>Bienvenido Juguemos</h2>
+                <button class="menu-button allow-mouse" data-action="start">COMENZAR</button>
+                <button class="menu-button" data-action="levels">NIVELES</button>
+                <button class="menu-button" data-action="exit">SALIR</button>
+            </div>
+            
             <div id="levelsMenu" class="menu hidden">
-                <h2>SELECCIONAR NIVEL</h2>
+                <h2>Selecciona Nivel</h2>
                 <div class="level-options">
                     <div class="level-option" data-level="1">
                         <h3>NIVEL 1</h3>
-                        <p>Fácil</p>
-                        <small>Gesto: ✌️</small>
+                        <p>Velocidad: Normal</p>
+                        <small>Gesto:✌️</small>
                     </div>
                     <div class="level-option" data-level="2">
                         <h3>NIVEL 2</h3>
-                        <p>Medio</p>
-                        <small>Gesto: ✌️</small>
+                        <p>Velocidad: Rápido</p>
+                        <small>Gesto:✌️</small>
                     </div>
                     <div class="level-option" data-level="3">
                         <h3>NIVEL 3</h3>
-                        <p>Difícil</p>
-                        <small>Gesto: ✌️</small>
+                        <p>Velocidad: Muy Rápido</p>
+                        <small>Gesto:✌️</small>
                     </div>
                 </div>
                 <button class="menu-button" data-action="back">VOLVER</button>
             </div>
-
+            
             <div id="pauseMenu" class="menu hidden">
-                <h2>JUEGO PAUSADO</h2>
+                <h2>PAUSA</h2>
                 <button class="menu-button" data-action="resume">CONTINUAR</button>
+                <button class="menu-button" data-action="menu">MENÚ</button>
+                <button class="menu-button" data-action="exit">SALIR</button>
+            </div>
+            
+            <div id="winMenu" class="menu hidden">
+                <h2 id="winTitle">¡Ganaste el Nivel!</h2>
+                <p class="score-display">Puntaje: <span id="winScore">0</span></p>
+                <button class="menu-button" data-action="nextLevel">CONTINUAR NIVEL</button>
+                <button class="menu-button" data-action="menu">MENÚ</button>
+                <button class="menu-button" data-action="exit">SALIR</button>
+            </div>
+            
+            <div id="loseMenu" class="menu hidden">
+                <h2>Has Perdido El Nivel <span id="loseLevel">1</span> :(</h2>
+                <p class="score-display">Puntaje: <span id="loseScore">0</span></p>
+                <button class="menu-button" data-action="retry">REPETIR NIVEL</button>
+                <button class="menu-button" data-action="menu">MENÚ</button>
+                <button class="menu-button" data-action="exit">SALIR</button>
+            </div>
+
+            <div id="gameCompleteMenu" class="menu hidden">
+                <h1 id="completeTitle">¡FELICIDADES!😀</h1>
+                <h2 id="completeSubtitle">Has completado todos los niveles</h2>
+                <p>Puntuación final: <span id="completeScore">0</span></p>
+                
                 <button class="menu-button" data-action="menu">MENÚ PRINCIPAL</button>
+                <button class="menu-button" data-action="exit">SALIR</button>
             </div>
         </div>
         
         <div class="gesture-info">
-            <div>Estado: <span id="gestureState">Iniciando cámara...</span></div>
-            <div>Gesto: <span id="currentGesture">-</span></div>
-        </div>
-
-        <div class="debug-info" id="debugInfo">
-            Debug: <span id="debugText">Inicializando...</span>
+            <div>Dedos levantados: <span id="fingersCount">0</span></div>
+            <div>Estado: <span id="gestureState">Esperando gestos...</span></div>
         </div>
     </div>
 
     <script>
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('output_canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+
         class RompeBloquesGame {
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
                 this.ctx = this.canvas.getContext('2d');
-                this.videoElement = document.getElementById('webcam');
-                this.canvasElement = document.getElementById('output_canvas');
-                this.canvasCtx = this.canvasElement.getContext('2d');
+                
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                canvasElement.width = window.innerWidth;
+                canvasElement.height = window.innerHeight;
                 
                 this.images = {
                     platform: new Image(),
-                    ball: new Image(),
+                    ball: new Image(), 
                     brick: new Image()
                 };
-                
+
                 this.images.platform.src = 'public/tierra.png';
                 this.images.ball.src = 'public/esfera.png';
                 this.images.brick.src = 'public/ladrillo.png';
-                
-                this.setupCanvas();
-                this.initGame();
-                this.setupMediaPipe();
+
                 this.setupFallbackImages();
-                this.setupButtonActions();
-            }
 
-            setupButtonActions() {
-                // Configurar acciones para todos los botones
-                document.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('menu-button') || e.target.classList.contains('level-option')) {
-                        this.handleButtonAction(e.target);
-                    }
-                });
-            }
-
-            handleButtonAction(button) {
-                const action = button.dataset.action;
-                const level = button.dataset.level;
-                
-                console.log('Botón clickeado:', button.textContent, 'Action:', action, 'Level:', level);
-                
-                if (action === 'start' && level) {
-                    this.startGame(parseInt(level));
-                } else if (action === 'levels') {
-                    this.showLevelsMenu();
-                } else if (action === 'exit') {
-                    window.location.href = 'index.html';
-                } else if (action === 'back') {
-                    this.showMainMenu();
-                } else if (action === 'resume') {
-                    this.resumeGame();
-                } else if (action === 'menu') {
-                    this.showMainMenu();
-                }
-                
-                // Si es un level-option sin data-action pero con data-level
-                if (!action && level) {
-                    this.startGame(parseInt(level));
-                }
-            }
-
-            setupFallbackImages() {
-                this.images.platform.onerror = () => {
-                    console.log('Usando fallback para plataforma');
-                    this.images.platform = this.createFallbackImage(180, 25, '#00ff00');
-                };
-                
-                this.images.ball.onerror = () => {
-                    console.log('Usando fallback para pelota');
-                    this.images.ball = this.createFallbackImage(28, 28, '#ffffff', true);
-                };
-                
-                this.images.brick.onerror = () => {
-                    console.log('Usando fallback para ladrillos');
-                    this.images.brick = this.createFallbackImage(90, 35, '#ff0000');
-                };
-            }
-
-            createFallbackImage(width, height, color, isCircle = false) {
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                
-                if (isCircle) {
-                    ctx.fillStyle = color;
-                    ctx.beginPath();
-                    ctx.arc(width/2, height/2, width/2, 0, Math.PI * 2);
-                    ctx.fill();
-                } else {
-                    ctx.fillStyle = color;
-                    ctx.fillRect(0, 0, width, height);
-                    ctx.strokeStyle = '#000000';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(0, 0, width, height);
-                }
-                
-                const img = new Image();
-                img.src = canvas.toDataURL();
-                return img;
-            }
-
-            setupCanvas() {
-                this.canvas.width = window.innerWidth;
-                this.canvas.height = window.innerHeight;
-                this.canvasElement.width = window.innerWidth;
-                this.canvasElement.height = window.innerHeight;
-            }
-
-            initGame() {
+                // ELEMENTOS MÁS GRANDES
                 this.platform = {
-                    x: this.canvas.width / 2 - 90,
-                    y: this.canvas.height - 70,
-                    width: 180,
-                    height: 25
+                    x: this.canvas.width / 2 - 120,
+                    y: this.canvas.height - 120,
+                    width: 240,
+                    height: 35
                 };
                 
                 this.ball = {
                     x: this.canvas.width / 2,
-                    y: this.canvas.height - 110,
-                    radius: 14,
-                    speedX: 6,
-                    speedY: -6
+                    y: this.canvas.height - 180,
+                    radius: 25,
+                    speedX: 8,
+                    speedY: -8,
+                    active: false
                 };
                 
                 this.bricks = [];
                 this.lives = 3;
                 this.score = 0;
                 this.level = 1;
-                this.gameActive = false;
-                this.gamePaused = false;
+                this.gameState = 'menu'; // CORREGIDO: control de estado
+                this.waitingForRestart = false;
+                this.fistStartTime = 0;
+                this.completedLevels = [];
                 
                 this.gestureState = {
+                    indexTip: { x: 0, y: 0 },
+                    middleTip: { x: 0, y: 0 },
+                    palmBase: { x: 0, y: 0 },
+                    fist: false,
+                    fingersUp: 0,
+                    clickActive: false,
                     lastClickTime: 0,
-                    lastFistTime: 0,
-                    lastVGestureTime: 0,
-                    currentGesture: 'none',
                     hoverButton: null,
-                    clickCooldown: false
+                    vGesture: false
                 };
                 
-                this.createBricks();
-                this.updateUI();
+                this.hands = null;
+                this.camera = null;
+                
+                // VELOCIDADES MÁS RÁPIDAS
+                this.levelSpeeds = {
+                    1: { x: 8, y: -8 },   // Más rápido
+                    2: { x: 12, y: -12 }, // Rápido
+                    3: { x: 16, y: -16 }  // Muy rápido
+                };
+                
+                this.init();
             }
 
+            setupFallbackImages() {
+                this.createFallbackImage('platform', 240, 35, '#00ff00');
+                this.createFallbackImage('ball', 50, 50, '#ffffff');
+                this.createFallbackImage('brick', 120, 45, '#ff0000'); // Más grande
+            }
+
+            createFallbackImage(name, width, height, color) {
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.fillStyle = color;
+                
+                if (name === 'ball') {
+                    ctx.beginPath();
+                    ctx.arc(width/2, height/2, width/2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(0, 0, width, height);
+                    
+                    if (name === 'brick') {
+                        ctx.strokeStyle = '#aa0000';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(0, 0, width, height);
+                    }
+                }
+                
+                const img = new Image();
+                img.src = canvas.toDataURL();
+                
+                this.images[name].onerror = () => {
+                    this.images[name] = img;
+                };
+            }
+            
+            async init() {
+                await this.setupMediaPipe();
+                this.createBricks();
+                this.setupEventListeners();
+                this.gameLoop();
+            }
+
+            setupEventListeners() {
+                // Solo el botón "COMENZAR" permite click de mouse
+                document.querySelector('.menu-button.allow-mouse').addEventListener('click', (e) => {
+                    this.handleButtonClick(e.target);
+                });
+
+                // Desactivar clicks de mouse en otros botones
+                document.querySelectorAll('.menu-button:not(.allow-mouse), .level-option').forEach(button => {
+                    button.style.pointerEvents = 'none';
+                });
+            }
+            
             async setupMediaPipe() {
                 try {
+                    if (typeof Hands === 'undefined' || typeof Camera === 'undefined') {
+                        console.error('MediaPipe Hands o Camera no están definidos. Asegúrate de incluir los scripts.');
+                        return;
+                    }
+
                     this.hands = new Hands({
                         locateFile: (file) => {
                             return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
@@ -420,37 +441,35 @@
                     });
                     
                     this.hands.setOptions({
-                        maxNumHands: 1,
+                        maxNumHands: 2,
                         modelComplexity: 1,
-                        minDetectionConfidence: 0.7,
+                        minDetectionConfidence: 0.5,
                         minTrackingConfidence: 0.5
                     });
                     
                     this.hands.onResults(this.onHandResults.bind(this));
                     
-                    const camera = new Camera(this.videoElement, {
+                    this.camera = new Camera(videoElement, {
                         onFrame: async () => {
-                            await this.hands.send({image: this.videoElement});
+                            await this.hands.send({ image: videoElement });
                         },
-                        width: 640,
-                        height: 480
+                        width: window.innerWidth,
+                        height: window.innerHeight
                     });
                     
-                    await camera.start();
-                    document.getElementById('gestureState').textContent = 'Cámara activa - Mueve tu mano';
+                    await this.camera.start();
                     
                 } catch (error) {
-                    console.error('Error iniciando cámara:', error);
-                    document.getElementById('gestureState').textContent = 'Error con la cámara';
+                    console.error('Error MediaPipe:', error);
                 }
             }
-
+            
             onHandResults(results) {
-                this.canvasCtx.save();
-                this.canvasCtx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
+                canvasCtx.save();
+                canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
                 
                 if (results.image) {
-                    this.canvasCtx.drawImage(results.image, 0, 0, this.canvasElement.width, this.canvasElement.height);
+                    canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
                 }
                 
                 if (results.multiHandLandmarks) {
@@ -460,134 +479,125 @@
                     }
                 }
                 
-                this.canvasCtx.restore();
+                canvasCtx.restore();
             }
-
+            
             drawHandLandmarks(landmarks) {
-                this.canvasCtx.fillStyle = '#00ff00';
-                for (const landmark of landmarks) {
-                    this.canvasCtx.beginPath();
-                    this.canvasCtx.arc(
-                        landmark.x * this.canvasElement.width,
-                        landmark.y * this.canvasElement.height,
-                        5, 0, 2 * Math.PI
+                const HAND_CONNECTIONS = [
+                    [0,1],[1,2],[2,3],[3,4],
+                    [0,5],[5,6],[6,7],[7,8],
+                    [0,9],[9,10],[10,11],[11,12],
+                    [0,13],[13,14],[14,15],[15,16],
+                    [0,17],[17,18],[18,19],[19,20],
+                    [5,9],[9,13],[13,17]
+                ];
+                
+                canvasCtx.strokeStyle = '#00ff00';
+                canvasCtx.lineWidth = 4;
+                for (const connection of HAND_CONNECTIONS) {
+                    const [start, end] = connection;
+                    canvasCtx.beginPath();
+                    canvasCtx.moveTo(
+                        landmarks[start].x * canvasElement.width,
+                        landmarks[start].y * canvasElement.height
                     );
-                    this.canvasCtx.fill();
+                    canvasCtx.lineTo(
+                        landmarks[end].x * canvasElement.width,
+                        landmarks[end].y * canvasElement.height
+                    );
+                    canvasCtx.stroke();
+                }
+                
+                canvasCtx.fillStyle = '#ff0000';
+                for (const landmark of landmarks) {
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(
+                        landmark.x * canvasElement.width,
+                        landmark.y * canvasElement.height,
+                        6, 0, 2 * Math.PI
+                    );
+                    canvasCtx.fill();
                 }
             }
-
+            
             processHandLandmarks(landmarks) {
-                // Control de plataforma (siempre activo cuando hay juego)
-                if (this.gameActive && !this.gamePaused) {
-                    const wrist = landmarks[0];
-                    const gameX = (1 - wrist.x) * this.canvas.width;
-                    
-                    this.platform.x = gameX - this.platform.width / 2;
-                    
-                    if (this.platform.x < 0) this.platform.x = 0;
-                    if (this.platform.x + this.platform.width > this.canvas.width) {
-                        this.platform.x = this.canvas.width - this.platform.width;
-                    }
-                }
-
-                // Detectar gestos (SIEMPRE activos, incluso en menús)
-                this.detectGestures(landmarks);
-                
-                // Manejar hover de botones (SIEMPRE activo)
-                this.handleButtonHover(landmarks);
-            }
-
-            detectGestures(landmarks) {
-                const now = Date.now();
-                const fingersUp = this.countFingersUp(landmarks);
-                const isFist = this.isFist(landmarks);
-                const isVGesture = this.isVGesture(landmarks);
-                const isClickGesture = this.isClickGesture(landmarks);
-
-                let gestureName = 'Navegando menús';
-                let gestureIcon = '👐';
-
-                // Gesto de PUÑO - solo en juego activo
-                if (isFist && (now - this.gestureState.lastFistTime > 1000) && this.gameActive && !this.gamePaused) {
-                    gestureName = 'PUÑO - Pausar juego';
-                    gestureIcon = '✊';
-                    this.gestureState.lastFistTime = now;
-                    this.handleFistGesture();
-                } 
-                // Gesto de V - solo en juego activo
-                else if (isVGesture && (now - this.gestureState.lastVGestureTime > 1000) && this.gameActive && !this.gamePaused) {
-                    gestureName = 'V - Seleccionar nivel';
-                    gestureIcon = '✌️';
-                    this.gestureState.lastVGestureTime = now;
-                    this.handleVGesture();
-                } 
-                // Gesto de CLICK - SIEMPRE ACTIVO en todos los menús
-                else if (isClickGesture && (now - this.gestureState.lastClickTime > 600) && !this.gestureState.clickCooldown) {
-                    gestureName = 'CLIC - Seleccionar';
-                    gestureIcon = '👆';
-                    this.gestureState.lastClickTime = now;
-                    this.handleClickGesture();
-                }
-                // Movimiento normal
-                else if (this.gameActive && !this.gamePaused) {
-                    gestureName = 'Moviendo plataforma';
-                    gestureIcon = '👐';
-                }
-
-                document.getElementById('currentGesture').textContent = `${gestureIcon} ${gestureName}`;
-                
-                // Debug info
+                const wrist = landmarks[0];
                 const indexTip = landmarks[8];
                 const middleTip = landmarks[12];
+
+                this.gestureState.palmBase = {
+                    x: (1 - wrist.x) * canvasElement.width,
+                    y: wrist.y * canvasElement.height
+                };
                 
-                const indexMiddleDist = Math.sqrt(
-                    Math.pow(indexTip.x - middleTip.x, 2) + 
-                    Math.pow(indexTip.y - middleTip.y, 2)
+                this.gestureState.indexTip = {
+                    x: (1 - indexTip.x) * canvasElement.width,
+                    y: indexTip.y * canvasElement.height
+                };
+                
+                this.gestureState.middleTip = {
+                    x: (1 - middleTip.x) * canvasElement.width,
+                    y: middleTip.y * canvasElement.height
+                };
+                
+                this.gestureState.fingersUp = this.countFingersUp(landmarks);
+                this.gestureState.fist = this.isFist(landmarks);
+                this.gestureState.vGesture = this.isVGesture(landmarks);
+                
+                const clickDistance = Math.sqrt(
+                    Math.pow(this.gestureState.indexTip.x - this.gestureState.middleTip.x, 2) +
+                    Math.pow(this.gestureState.indexTip.y - this.gestureState.middleTip.y, 2)
                 );
                 
-                document.getElementById('debugText').textContent = 
-                    `Dedos: ${fingersUp}, Fist: ${isFist}, V: ${isVGesture}, Click: ${isClickGesture}\n` +
-                    `Dist I-M: ${indexMiddleDist.toFixed(3)}`;
-            }
-
-            handleButtonHover(landmarks) {
-                const indexTip = landmarks[8];
-                const cursorX = (1 - indexTip.x) * this.canvas.width;
-                const cursorY = indexTip.y * this.canvas.height;
-
-                let hoverButton = null;
-                const activeMenus = document.querySelectorAll('.menu:not(.hidden)');
-
-                activeMenus.forEach(menu => {
-                    const buttons = menu.querySelectorAll('.menu-button, .level-option');
-                    buttons.forEach(button => {
-                        const rect = button.getBoundingClientRect();
-                        button.classList.remove('selected');
-                        
-                        if (cursorX >= rect.left && cursorX <= rect.right &&
-                            cursorY >= rect.top && cursorY <= rect.bottom) {
-                            hoverButton = button;
-                            button.classList.add('selected');
-                        }
-                    });
-                });
-
-                this.gestureState.hoverButton = hoverButton;
-            }
-
-            isFist(landmarks) {
-                const fingerTips = [8, 12, 16, 20];
-                const fingerPips = [6, 10, 14, 18];
-                let bentFingers = 0;
-
-                for (let i = 0; i < fingerTips.length; i++) {
-                    if (landmarks[fingerTips[i]].y > landmarks[fingerPips[i]].y) {
-                        bentFingers++;
-                    }
+                const now = Date.now();
+                
+                // Gesto de CLICK (dos dedos juntos)
+                if (clickDistance < 40 && !this.gestureState.clickActive && 
+                    (now - this.gestureState.lastClickTime) > 500) {
+                    this.gestureState.clickActive = true;
+                    this.gestureState.lastClickTime = now;
+                    this.handleGestureClick();
+                } else if (clickDistance >= 40) {
+                    this.gestureState.clickActive = false;
                 }
-                return bentFingers >= 3;
+                
+                document.getElementById('fingersCount').textContent = this.gestureState.fingersUp;
+                
+                let estado = '🖐️ MOVIMIENTO - Plataforma';
+                if (this.gestureState.fist) {
+                    estado = '✊ PUÑO - Pausa';
+                } else if (clickDistance < 40) {
+                    estado = '👆 CLIC - Botones';
+                } else if (this.gestureState.vGesture) {
+                    estado = '✌️ V - Seleccionar Nivel';
+                }
+                document.getElementById('gestureState').textContent = estado;
+                
+                // Solo mover plataforma cuando se está jugando
+                if (this.gameState === 'playing' && !this.waitingForRestart) {
+                    this.movePlatformWithHand();
+                }
+                
+                // Detección de puño para pausa
+                if (this.gestureState.fist) {
+                    if (this.fistStartTime === 0) {
+                        this.fistStartTime = now;
+                    } else if (this.gameState === 'playing' && !this.waitingForRestart && (now - this.fistStartTime) > 500) {
+                        this.pauseGame();
+                        this.fistStartTime = 0;
+                    }
+                } else {
+                    this.fistStartTime = 0;
+                }
+                
+                this.handleButtonHover();
+                
+                // Gesto V para selección de niveles
+                if (this.gameState === 'levels' && this.gestureState.vGesture) {
+                    this.handleLevelSelection();
+                }
             }
-
+            
             isVGesture(landmarks) {
                 const indexTip = landmarks[8];
                 const middleTip = landmarks[12];
@@ -597,113 +607,136 @@
                 const middlePip = landmarks[10];
                 const ringPip = landmarks[14];
                 const pinkyPip = landmarks[18];
-
+                
                 const indexUp = indexTip.y < indexPip.y;
                 const middleUp = middleTip.y < middlePip.y;
                 const ringDown = ringTip.y > ringPip.y;
                 const pinkyDown = pinkyTip.y > pinkyPip.y;
-
-                const indexMiddleDist = Math.sqrt(
-                    Math.pow(indexTip.x - middleTip.x, 2) + 
-                    Math.pow(indexTip.y - middleTip.y, 2)
-                );
-
-                return indexUp && middleUp && ringDown && pinkyDown && indexMiddleDist > 0.08;
+                
+                return indexUp && middleUp && ringDown && pinkyDown;
             }
-
-            isClickGesture(landmarks) {
-                const indexTip = landmarks[8];
-                const middleTip = landmarks[12];
-
-                // GESTO DE CLICK MEJORADO - más sensible
-                const indexMiddleDist = Math.sqrt(
-                    Math.pow(indexTip.x - middleTip.x, 2) + 
-                    Math.pow(indexTip.y - middleTip.y, 2)
-                );
-
-                return indexMiddleDist < 0.05; // Ajustado para mejor detección
-            }
-
-            handleFistGesture() {
-                if (this.gameActive && !this.gamePaused) {
-                    this.pauseGame();
-                }
-            }
-
-            handleVGesture() {
-                if (this.gameActive && !this.gamePaused) {
-                    this.showLevelsMenu();
-                }
-            }
-
-            handleClickGesture() {
-                if (this.gestureState.hoverButton) {
-                    console.log('CLICK GESTURE en:', this.gestureState.hoverButton.textContent);
+            
+            handleLevelSelection() {
+                const levelOptions = document.querySelectorAll('.level-option');
+                let selectedLevel = null;
+                
+                levelOptions.forEach(option => {
+                    const rect = option.getBoundingClientRect();
+                    option.classList.remove('selected');
                     
-                    // Efecto visual de click
-                    this.showClickEffect(this.gestureState.hoverButton);
-                    
-                    // Cooldown para evitar clicks múltiples
-                    this.gestureState.clickCooldown = true;
+                    if (this.gestureState.indexTip.x >= rect.left && 
+                        this.gestureState.indexTip.x <= rect.right &&
+                        this.gestureState.indexTip.y >= rect.top && 
+                        this.gestureState.indexTip.y <= rect.bottom) {
+                        option.classList.add('selected');
+                        selectedLevel = parseInt(option.dataset.level);
+                    }
+                });
+                
+                if (selectedLevel && this.gestureState.vGesture) {
                     setTimeout(() => {
-                        this.gestureState.clickCooldown = false;
-                    }, 600);
-                    
-                    // Ejecutar acción del botón
-                    this.handleButtonAction(this.gestureState.hoverButton);
+                        if (this.gestureState.vGesture) {
+                            this.startGame(selectedLevel);
+                        }
+                    }, 800);
                 }
             }
-
-            showClickEffect(button) {
-                const rect = button.getBoundingClientRect();
-                const effect = document.createElement('div');
-                effect.className = 'click-feedback';
-                effect.style.width = '50px';
-                effect.style.height = '50px';
-                effect.style.left = (rect.left + rect.width / 2 - 25) + 'px';
-                effect.style.top = (rect.top + rect.height / 2 - 25) + 'px';
-                
-                document.body.appendChild(effect);
-                
-                setTimeout(() => {
-                    document.body.removeChild(effect);
-                }, 500);
-            }
-
+            
             countFingersUp(landmarks) {
                 let count = 0;
                 const fingerTips = [8, 12, 16, 20];
                 const fingerPips = [6, 10, 14, 18];
-
+                
                 for (let i = 0; i < fingerTips.length; i++) {
                     if (landmarks[fingerTips[i]].y < landmarks[fingerPips[i]].y) {
                         count++;
                     }
                 }
-
-                if (landmarks[4].x < landmarks[3].x) {
-                    count++;
-                }
-
+                
+                if (landmarks[4].x < landmarks[3].x) count++;
+                
                 return count;
             }
-
+            
+            isFist(landmarks) {
+                const fingerTips = [8, 12, 16, 20];
+                const fingerPips = [6, 10, 14, 18];
+                let bentFingers = 0;
+                
+                for (let i = 0; i < fingerTips.length; i++) {
+                    if (landmarks[fingerTips[i]].y > landmarks[fingerPips[i]].y) {
+                        bentFingers++;
+                    }
+                }
+                
+                return bentFingers >= 3;
+            }
+            
+            movePlatformWithHand() {
+                const gameX = this.gestureState.palmBase.x;
+                this.platform.x = gameX - this.platform.width / 2;
+                
+                if (this.platform.x < 0) this.platform.x = 0;
+                if (this.platform.x + this.platform.width > this.canvas.width) {
+                    this.platform.x = this.canvas.width - this.platform.width;
+                }
+            }
+            
+            handleButtonHover() {
+                const activeMenus = document.querySelectorAll('.menu');
+                let hoverButton = null;
+                
+                activeMenus.forEach(menu => {
+                    if (!menu.classList.contains('hidden')) {
+                        const buttons = menu.querySelectorAll('.menu-button, .level-option');
+                        
+                        buttons.forEach(button => {
+                            const rect = button.getBoundingClientRect();
+                            button.classList.remove('selected');
+                            
+                            if (this.gestureState.indexTip.x >= rect.left && 
+                                this.gestureState.indexTip.x <= rect.right &&
+                                this.gestureState.indexTip.y >= rect.top && 
+                                this.gestureState.indexTip.y <= rect.bottom) {
+                                hoverButton = button;
+                                button.classList.add('selected');
+                            }
+                        });
+                    }
+                });
+                
+                this.gestureState.hoverButton = hoverButton;
+            }
+            
+            handleGestureClick() {
+                if (this.gestureState.hoverButton) { 
+                    this.gestureState.hoverButton.style.background = '#ffff00';
+                    setTimeout(() => {
+                        if (this.gestureState.hoverButton) {
+                            this.gestureState.hoverButton.style.background = '';
+                        }
+                    }, 200);
+                    
+                    this.handleButtonClick(this.gestureState.hoverButton);
+                }
+            }
+            
             createBricks() {
                 this.bricks = [];
-                const rows = 4;
+                const rows = 2; // SOLO 2 FILAS
                 const cols = 8;
-                const brickWidth = 90;
-                const brickHeight = 35;
+                const brickWidth = 120;
+                const brickHeight = 45;
                 const padding = 8;
-
+                
                 const totalWidth = cols * (brickWidth + padding) - padding;
                 const startX = (this.canvas.width - totalWidth) / 2;
-
+                
                 for (let row = 0; row < rows; row++) {
                     for (let col = 0; col < cols; col++) {
                         this.bricks.push({
                             x: startX + col * (brickWidth + padding),
-                            y: 80 + row * (brickHeight + padding),
+                            y: 100 + row * (brickHeight + padding),
                             width: brickWidth,
                             height: brickHeight,
                             active: true
@@ -711,193 +744,277 @@
                     }
                 }
             }
-
+            
+            async showLifeLostMessage() {
+                if (this.lives > 0) {
+                    const message = document.getElementById('lifeLostMessage');
+                    const text = document.getElementById('lifeLostText');
+                    const timer = document.getElementById('lifeLostTimer');
+                    
+                    text.textContent = `Te quedan ${this.lives} vidas`;
+                    message.style.display = 'block';
+                    
+                    for (let i = 3; i > 0; i--) {
+                        timer.textContent = `Continuando en ${i} segundos...`;
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                    
+                    message.style.display = 'none';
+                    this.waitingForRestart = false;
+                    
+                    this.ball.x = this.canvas.width / 2;
+                    this.ball.y = this.canvas.height - 180;
+                    this.ball.speedX = this.levelSpeeds[this.level].x;
+                    this.ball.speedY = this.levelSpeeds[this.level].y;
+                }
+            }
+            
             startGame(level) {
                 this.level = level;
                 this.lives = 3;
                 this.score = 0;
-                this.gameActive = true;
-                this.gamePaused = false;
-                this.hideAllMenus();
-                this.createBricks();
-                this.resetBall();
-                this.updateUI();
+                this.gameState = 'playing'; // CORREGIDO: estado correcto
+                this.waitingForRestart = false;
                 
-                if (this.gameLoopId) {
-                    cancelAnimationFrame(this.gameLoopId);
-                }
-                this.gameLoop();
+                const speed = this.levelSpeeds[level];
+                this.ball.speedX = speed.x;
+                this.ball.speedY = speed.y;
+                
+                this.ball.x = this.canvas.width / 2;
+                this.ball.y = this.canvas.height - 180;
+                this.ball.active = true;
+                
+                this.createBricks();
+                this.hideAllMenus();
+                this.updateUI();
             }
-
+            
+            handleButtonClick(button) {
+                const action = button.dataset.action || button.dataset.level;
+                
+                switch(action) {
+                    case 'start':
+                        this.startGame(1);
+                        break;
+                    case 'levels':
+                        this.showLevelsMenu();
+                        break;
+                    case 'exit':
+                        window.location.href = 'index.html';
+                        break;
+                    case 'back':
+                        this.showMainMenu();
+                        break;
+                    case 'resume':
+                        this.resumeGame();
+                        break;
+                    case 'menu':
+                        this.showMainMenu();
+                        break;
+                    case 'nextLevel':
+                        this.nextLevel();
+                        break;
+                    case 'retry':
+                        this.retryLevel();
+                        break;
+                    case '1':
+                    case '2':
+                    case '3':
+                        this.startGame(parseInt(action));
+                        break;
+                }
+            }
+            
+            nextLevel() {
+                if (this.level < 3) {
+                    this.startGame(this.level + 1);
+                } else {
+                    this.showWinMenu();
+                }
+            }
+            
+            retryLevel() {
+                this.startGame(this.level);
+            }
+            
+            pauseGame() {
+                if (this.gameState === 'playing' && !this.waitingForRestart) {
+                    this.gameState = 'paused'; // CORREGIDO: estado pausa
+                    this.showPauseMenu();
+                }
+            }
+            
+            resumeGame() {
+                if (this.gameState === 'paused') {
+                    this.gameState = 'playing'; // CORREGIDO: reanudar juego
+                    this.hideAllMenus();
+                }
+            }
+            
             showMainMenu() {
-                this.gameActive = false;
-                this.gamePaused = false;
+                this.gameState = 'menu'; // CORREGIDO: estado menú
                 this.hideAllMenus();
                 document.getElementById('mainMenu').classList.remove('hidden');
             }
-
+            
             showLevelsMenu() {
+                this.gameState = 'levels'; // CORREGIDO: estado niveles
                 this.hideAllMenus();
                 document.getElementById('levelsMenu').classList.remove('hidden');
             }
-
-            pauseGame() {
-                if (this.gameActive && !this.gamePaused) {
-                    this.gamePaused = true;
-                    this.hideAllMenus();
-                    document.getElementById('pauseMenu').classList.remove('hidden');
+            
+            showPauseMenu() {
+                this.hideAllMenus();
+                document.getElementById('pauseMenu').classList.remove('hidden');
+            }
+            
+            showWinMenu() {
+                this.gameState = 'win';
+                this.hideAllMenus();
+                
+                if (!this.completedLevels.includes(this.level)) {
+                    this.completedLevels.push(this.level);
+                }
+                
+                if (this.completedLevels.length === 3) {
+                    this.showGameCompleteMenu();
+                } else {
+                    document.getElementById('winTitle').textContent = `¡Ganaste el Nivel ${this.level}!`;
+                    document.getElementById('winScore').textContent = this.score;
+                    
+                    const nextLevelButton = document.querySelector('#winMenu [data-action="nextLevel"]');
+                    if (this.level < 3) {
+                        nextLevelButton.textContent = `CONTINUAR NIVEL ${this.level + 1}`;
+                        nextLevelButton.style.display = 'block';
+                    } else {
+                        nextLevelButton.textContent = '¡JUEGO COMPLETADO!';
+                        nextLevelButton.style.display = 'none';
+                    }
+                    
+                    document.getElementById('winMenu').classList.remove('hidden');
                 }
             }
-
-            resumeGame() {
-                if (this.gamePaused) {
-                    this.gamePaused = false;
-                    this.hideAllMenus();
-                    this.gameLoop();
-                }
+            
+            showGameCompleteMenu() {
+                this.gameState = 'complete';
+                this.hideAllMenus();
+                document.getElementById('completeTitle').textContent = '¡FELICIDADES!';
+                document.getElementById('completeSubtitle').textContent = 'Has completado todos los niveles';
+                document.getElementById('completeScore').textContent = this.score;
+                document.getElementById('gameCompleteMenu').classList.remove('hidden');
             }
-
+            
+            showLoseMenu() {
+                this.gameState = 'lose';
+                this.hideAllMenus();
+                document.getElementById('loseLevel').textContent = this.level;
+                document.getElementById('loseScore').textContent = this.score;
+                document.getElementById('loseMenu').classList.remove('hidden');
+            }
+            
             hideAllMenus() {
-                const menus = document.querySelectorAll('.menu');
-                menus.forEach(menu => menu.classList.add('hidden'));
+                const menus = document.querySelectorAll('.menu, .life-lost-message');
+                menus.forEach(menu => {
+                    menu.classList.add('hidden');
+                    menu.style.display = 'none';
+                });
             }
-
+            
             updateUI() {
                 document.getElementById('livesCount').textContent = this.lives;
                 document.getElementById('scoreCount').textContent = this.score;
                 document.getElementById('levelCount').textContent = this.level;
             }
-
+            
             update() {
-                if (!this.gameActive || this.gamePaused) return;
-
+                // CORREGIDO: Solo actualizar cuando se está jugando
+                if (this.gameState !== 'playing' || this.waitingForRestart) return;
+                
                 this.ball.x += this.ball.speedX;
                 this.ball.y += this.ball.speedY;
-
-                if (this.ball.x - this.ball.radius <= 0 || this.ball.x + this.ball.radius >= this.canvas.width) {
+                
+                if (this.ball.x - this.ball.radius <= 0 || 
+                    this.ball.x + this.ball.radius >= this.canvas.width) {
                     this.ball.speedX = -this.ball.speedX;
                 }
+                
                 if (this.ball.y - this.ball.radius <= 0) {
                     this.ball.speedY = -this.ball.speedY;
                 }
-
+                
                 if (this.ball.y + this.ball.radius >= this.canvas.height) {
                     this.lives--;
                     this.updateUI();
+                    
                     if (this.lives <= 0) {
-                        this.gameOver();
+                        this.gameState = 'lose';
+                        this.showLoseMenu();
                     } else {
-                        this.resetBall();
+                        this.waitingForRestart = true;
+                        this.showLifeLostMessage();
                     }
                 }
-
+                
                 if (this.ball.y + this.ball.radius >= this.platform.y &&
                     this.ball.y - this.ball.radius <= this.platform.y + this.platform.height &&
                     this.ball.x >= this.platform.x &&
                     this.ball.x <= this.platform.x + this.platform.width) {
+                    
                     this.ball.speedY = -Math.abs(this.ball.speedY);
-                    this.ball.speedX = (this.ball.x - (this.platform.x + this.platform.width / 2)) * 0.2;
+                    const hitPos = (this.ball.x - this.platform.x) / this.platform.width;
+                    this.ball.speedX = 15 * (hitPos - 0.5);
                 }
-
-                this.bricks.forEach(brick => {
+                
+                for (let brick of this.bricks) {
                     if (brick.active && this.checkCollision(brick)) {
                         brick.active = false;
                         this.ball.speedY = -this.ball.speedY;
                         this.score += 10;
                         this.updateUI();
-
-                        if (this.bricks.every(b => !b.active)) {
-                            this.levelComplete();
-                        }
                     }
-                });
+                }
+                
+                const activeBricks = this.bricks.filter(brick => brick.active);
+                if (activeBricks.length === 0) {
+                    this.gameState = 'win';
+                    this.showWinMenu();
+                }
             }
-
+            
             checkCollision(brick) {
                 return this.ball.x + this.ball.radius >= brick.x &&
                        this.ball.x - this.ball.radius <= brick.x + brick.width &&
                        this.ball.y + this.ball.radius >= brick.y &&
                        this.ball.y - this.ball.radius <= brick.y + brick.height;
             }
-
-            resetBall() {
-                this.ball.x = this.canvas.width / 2;
-                this.ball.y = this.canvas.height - 110;
-                this.ball.speedX = 6 * (Math.random() > 0.5 ? 1 : -1);
-                this.ball.speedY = -6;
-            }
-
-            levelComplete() {
-                this.score += 100;
-                alert(`¡Nivel ${this.level} completado! Puntaje: ${this.score}`);
-                this.level++;
-                this.createBricks();
-                this.resetBall();
-                this.updateUI();
-            }
-
-            gameOver() {
-                this.gameActive = false;
-                alert(`¡Game Over! Puntaje final: ${this.score}`);
-                this.showMainMenu();
-            }
-
+            
             draw() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
+                
                 if (this.images.platform.complete) {
                     this.ctx.drawImage(this.images.platform, this.platform.x, this.platform.y, this.platform.width, this.platform.height);
-                } else {
-                    this.ctx.fillStyle = '#00ff00';
-                    this.ctx.fillRect(this.platform.x, this.platform.y, this.platform.width, this.platform.height);
                 }
-
+                
                 if (this.images.ball.complete) {
                     this.ctx.drawImage(this.images.ball, this.ball.x - this.ball.radius, this.ball.y - this.ball.radius, this.ball.radius * 2, this.ball.radius * 2);
-                } else {
-                    this.ctx.fillStyle = '#ffffff';
-                    this.ctx.beginPath();
-                    this.ctx.arc(this.ball.x, this.ball.y, this.ball.radius, 0, Math.PI * 2);
-                    this.ctx.fill();
                 }
-
+                
                 this.bricks.forEach(brick => {
-                    if (brick.active) {
-                        if (this.images.brick.complete) {
-                            this.ctx.drawImage(this.images.brick, brick.x, brick.y, brick.width, brick.height);
-                        } else {
-                            this.ctx.fillStyle = '#ff0000';
-                            this.ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
-                            this.ctx.strokeStyle = '#aa0000';
-                            this.ctx.lineWidth = 2;
-                            this.ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
-                        }
+                    if (brick.active && this.images.brick.complete) {
+                        this.ctx.drawImage(this.images.brick, brick.x, brick.y, brick.width, brick.height);
                     }
                 });
             }
-
+            
             gameLoop() {
-                if (this.gameActive && !this.gamePaused) {
-                    this.update();
-                    this.draw();
-                    this.gameLoopId = requestAnimationFrame(() => this.gameLoop());
-                }
+                this.update();
+                this.draw();
+                requestAnimationFrame(() => this.gameLoop());
             }
         }
 
-        let game;
         window.addEventListener('DOMContentLoaded', () => {
-            game = new RompeBloquesGame();
-        });
-
-        window.addEventListener('resize', () => {
-            if (game) {
-                game.setupCanvas();
-                if (game.gameActive) {
-                    game.createBricks();
-                    game.resetBall();
-                }
-            }
+            new RompeBloquesGame();
         });
     </script>
 </body>
