@@ -546,7 +546,7 @@
                 
                 // GESTO DE CLICK MEJORADO - Funciona en TODOS los botones excepto menú inicial
                 if (clickDistance < 40 && !this.gestureState.clickActive && 
-                    (now - this.gestureState.lastClickTime) > 500 && this.gameState !== 'menu') {
+                    (now - this.gestureState.lastClickTime) > 500) {
                     this.gestureState.clickActive = true;
                     this.gestureState.lastClickTime = now;
                     this.handleGestureClick();
@@ -594,6 +594,11 @@
                         }
                         this.gestureState.vGestureActive = false;
                     }, 800);
+                }
+                
+                // Manejo de selección de niveles cuando estamos en el menú de niveles
+                if (this.gameState === 'levels') {
+                    this.handleLevelSelection();
                 }
             }
             
@@ -689,33 +694,31 @@
             }
             
             handleButtonHover() {
-                const activeMenus = document.querySelectorAll('.menu');
+                const activeMenus = document.querySelectorAll('.menu:not(.hidden)');
                 let hoverButton = null;
                 
                 activeMenus.forEach(menu => {
-                    if (!menu.classList.contains('hidden')) {
-                        const buttons = menu.querySelectorAll('.menu-button, .level-option');
+                    const buttons = menu.querySelectorAll('.menu-button, .level-option');
+                    
+                    buttons.forEach(button => {
+                        const rect = button.getBoundingClientRect();
+                        button.classList.remove('selected');
                         
-                        buttons.forEach(button => {
-                            const rect = button.getBoundingClientRect();
-                            button.classList.remove('selected');
-                            
-                            if (this.gestureState.indexTip.x >= rect.left && 
-                                this.gestureState.indexTip.x <= rect.right &&
-                                this.gestureState.indexTip.y >= rect.top && 
-                                this.gestureState.indexTip.y <= rect.bottom) {
-                                hoverButton = button;
-                                button.classList.add('selected');
-                            }
-                        });
-                    }
+                        if (this.gestureState.indexTip.x >= rect.left && 
+                            this.gestureState.indexTip.x <= rect.right &&
+                            this.gestureState.indexTip.y >= rect.top && 
+                            this.gestureState.indexTip.y <= rect.bottom) {
+                            hoverButton = button;
+                            button.classList.add('selected');
+                        }
+                    });
                 });
                 
                 this.gestureState.hoverButton = hoverButton;
             }
             
             handleGestureClick() {
-                if (this.gestureState.hoverButton && this.gameState !== 'menu') { 
+                if (this.gestureState.hoverButton) { 
                     // Efecto visual mejorado
                     const originalBackground = this.gestureState.hoverButton.style.background;
                     this.gestureState.hoverButton.style.background = '#ffff00';
@@ -859,8 +862,6 @@
                 if (this.gameState === 'paused') {
                     this.gameState = 'playing';
                     this.hideAllMenus();
-                    // CORREGIDO: Reiniciar el game loop
-                    this.gameLoop();
                 }
             }
             
@@ -871,6 +872,7 @@
             }
             
             showLevelsMenu() {
+                this.gameState = 'levels';
                 this.hideAllMenus();
                 document.getElementById('levelsMenu').classList.remove('hidden');
             }
